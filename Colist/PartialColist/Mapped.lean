@@ -86,3 +86,6 @@ def map {α α': Type u} (f : α → α'): PartialColist α → PartialColist α
         apply congr_arg
         refine (heq_of_cast_funext ?_).mpr head_heq ?_
         simp_all only
+
+instance : Functor PartialColist where
+  map := map
