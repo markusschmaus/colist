@@ -1,4 +1,4 @@
-import Colist.ListLike
+import Colist.ListLike.ListLike
 
 universe u
 

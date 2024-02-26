@@ -1,5 +1,5 @@
-import Colist.PartialColist
-import Colist.List
+import Colist.ListLike.AnyPartialListLike
+import Colist.ListLike.Instances.List
 
 universe u v
 
@@ -57,15 +57,15 @@ theorem heq_of_cast_funext {α α': Sort u} {β :Sort v} {f : α → β} {g : α
   · intro heq x
     exact congr_heq heq (heq_of_cast_eq type_eq rfl)
 
-namespace PartialColist
+namespace AnyPartialListLike
 
-def map {α α': Type u} (f : α → α'): PartialColist α → PartialColist α' :=
+def map {α α': Type u} (f : α → α'): AnyPartialListLike α → AnyPartialListLike α' :=
   let inst' {imp : Type u} (_ : PartialListLike α imp) : PartialListLike α' (PartialListLike.Mapped α α' imp) :=
     PartialListLike.Mapped.instPartialListLike (α := α) (α' := α')
   let map {imp : Type u} (inst : PartialListLike α imp) (x : imp) : PartialListLike.Mapped α α' imp :=
     PartialListLike.map f x (inst := inst)
-  Data.liftGen (PartialListLike.instSetoid α) (PartialListLike.instSetoid α') inst' map <| by
-    simp_all only [Data.liftGen.Precondition, Setoid.r, PartialListLike.equiv]
+  AnyOf.liftGen (PartialListLike.instSetoid α) (PartialListLike.instSetoid α') inst' map <| by
+    simp_all only [AnyOf.liftGen.Precondition, Setoid.r, PartialListLike.equiv]
     intro a b h n
     have isNil_eq := h n |>.isNil_eq
     have head_heq := h n |>.head_heq
@@ -87,5 +87,5 @@ def map {α α': Type u} (f : α → α'): PartialColist α → PartialColist α
         refine (heq_of_cast_funext ?_).mpr head_heq ?_
         simp_all only
 
-instance : Functor PartialColist where
+instance : Functor AnyPartialListLike where
   map := map

@@ -1,20 +1,28 @@
 import Mathlib.Tactic
-import Colist.PartialListLike
+import Colist.AnyOf
+import Colist.Bool
 
-universe u v w
+class PartialListLike (α : Type u) (β : Type v) : Type (max u v) where
+  isNil : β → Prop
+  head (as : β) : ¬ isNil as → α
+  tail : β → β
+  [instDecidableIsNil (as : β) : Decidable (isNil as)]
+  terminal_isNil : ∀ (as : β), isNil as → isNil (tail as)
 
-class ListLike (α : Type u) (β : Type v) extends PartialListLike α β : Type (max u v) where
-  finite (as : β) : PartialListLike.isFinite α as
+instance {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β}: Decidable (inst.isNil as) := inst.instDecidableIsNil as
 
-namespace ListLike
+namespace PartialListLike
 
-structure equivExt {α : Type u} (x₁ : Data.Imp (ListLike α))
-    (x₂ : Data.Imp (ListLike α)) : Prop where
+abbrev isFinite (α : Type u) {β : Type v} [inst : PartialListLike α β] (as : β) : Prop :=
+  ∃ (n : ℕ), inst.isNil (inst.tail^[n] as)
+
+structure equivExt {α : Type u} (x₁ : AnyOf.Imp (PartialListLike α))
+    (x₂ : AnyOf.Imp (PartialListLike α)) : Prop where
   intro ::
   isNil_eq : x₁.inst.isNil x₁.value ↔ x₂.inst.isNil x₂.value
   head_heq : HEq (x₁.inst.head x₁.value) (x₂.inst.head x₂.value)
 
-instance equivExt.instSetoid {α : Type u} : Setoid (Data.Imp <| ListLike α) where
+instance equivExt.instSetoid {α : Type u} : Setoid (AnyOf.Imp <| PartialListLike α) where
   r := equivExt
   iseqv := by
     constructor
@@ -32,11 +40,11 @@ instance equivExt.instSetoid {α : Type u} : Setoid (Data.Imp <| ListLike α) wh
       · have := h₁₂.head_heq
         simp only [h₁₂.head_heq.trans h₂₃.head_heq]
 
-def equiv {α : Type u} (x₁ : Data.Imp (ListLike α))
-    (x₂ : Data.Imp (ListLike α)) : Prop :=
+def equiv {α : Type u} (x₁ : AnyOf.Imp (PartialListLike α))
+    (x₂ : AnyOf.Imp (PartialListLike α)) : Prop :=
   ∀ (n : ℕ), equivExt ⟨x₁.imp, x₁.inst, (x₁.inst.tail^[n] x₁.value)⟩ ⟨x₂.imp, x₂.inst, (x₂.inst.tail^[n] x₂.value)⟩
 
-instance instSetoid (α : Type u) : Setoid (Data.Imp <| ListLike α) where
+instance instSetoid (α : Type u) : Setoid (AnyOf.Imp <| PartialListLike α) where
   r := equiv
   iseqv := by
     constructor

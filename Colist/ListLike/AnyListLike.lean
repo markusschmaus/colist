@@ -1,25 +1,25 @@
-import Colist.PartialColist
-import Colist.ListLike
+import Colist.ListLike.AnyPartialListLike
+import Colist.ListLike.ListLike
 
 universe u v
 
-def Colist (α : Type u) := Subtype (fun (as : PartialColist α) => PartialListLike.isFinite α as)
+def Colist (α : Type u) := Subtype (fun (as : AnyPartialListLike α) => PartialListLike.isFinite α as)
 
 namespace Colist
 
 def mk {α : Type u} {β : Type v} [inst : ListLike α β] (x : β) : Colist α :=
-  Subtype.mk (PartialColist.mk x) <| by
-    simp only [PartialColist.isFinite_mk, inst.finite]
+  Subtype.mk (AnyPartialListLike.mk x) <| by
+    simp only [AnyPartialListLike.isFinite_mk, inst.finite]
 
 instance {α : Type u} {L : Type u → Type v} [ListLike α (L α)] : CoeOut (L α) (Colist α) where
   coe := mk
 
 def tail {α : Type u} (x : Colist α) : Colist α := Subtype.mk (PartialListLike.tail α x.val) <| by
-    obtain ⟨_, inst, x', rep⟩ := PartialColist.exists_rep x.val
+    obtain ⟨_, inst, x', rep⟩ := AnyPartialListLike.exists_rep x.val
     have finite := x.property
     rw [←rep] at *
-    simp only [PartialListLike.isFinite, PartialColist.tail_mk, PartialColist.iterate_tail_mk,
-      PartialColist.isNil_mk] at *
+    simp only [PartialListLike.isFinite, AnyPartialListLike.tail_mk, AnyPartialListLike.iterate_tail_mk,
+      AnyPartialListLike.isNil_mk] at *
     obtain ⟨n, is_nil⟩ := finite
     use n.pred
     rw [←Function.iterate_succ_apply _ _ x']
@@ -76,7 +76,7 @@ theorem tail_mk {α : Type u} {β : Type v} [ListLike α β] {x : β} :
 theorem iterate_tail_mk (n : Nat) {α : Type u} {β : Type v} [inst : ListLike α β] {x : β} :
     (PartialListLike.tail α)^[n] (mk x : Colist α) = mk ((PartialListLike.tail α)^[n] x) := by
   apply Subtype.mk_eq_mk.mpr
-  simp only [PartialListLike.tail, mk, iterate_tail_val, ← PartialColist.iterate_tail_mk]
+  simp only [PartialListLike.tail, mk, iterate_tail_val, ← AnyPartialListLike.iterate_tail_mk]
 
 @[simp]
 theorem isFinite_mk {α : Type u} {β : Type v} [ListLike α β] {x : β} :

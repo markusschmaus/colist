@@ -1,4 +1,4 @@
-import Colist.ListLike
+import Colist.ListLike.ListLike
 
 universe u v
 
@@ -21,5 +21,3 @@ instance {stream : Type u} {α : Type v} [Stream stream α] : PartialListLike α
     match as with
     | none => none
     | some (_, as) => Stream.next? as
-
-end StreamListLike

@@ -5,7 +5,7 @@ universe u v w
 @[simp]
 def cast' {α β : Sort u} (a : α) (h : α = β) : β := cast h a
 
-namespace Data
+namespace AnyOf
 
 structure Imp (Class : Type u → Type v) : Type (max (u + 1) v) where
   imp : Type u
