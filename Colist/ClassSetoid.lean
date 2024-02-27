@@ -5,12 +5,14 @@ universe u v w
 @[simp]
 def cast' {α β : Sort u} (a : α) (h : α = β) : β := cast h a
 
-namespace AnyOf
-
-structure Imp (Class : Type u → Type v) : Type (max (u + 1) v) where
+structure ClassSetoid.Imp (Class : Type u → Type v) : Type (max (u + 1) v) where
   imp : Type u
   inst : Class imp
   value : imp
+
+def ClassSetoid (Class : Type u → Type v) := Setoid (ClassSetoid.Imp Class)
+
+namespace ClassSetoid
 
 structure lift.Precondition {Class : Type u → Type v} {β : {imp : Type u} → Class imp → imp → Type w}
     (s : Setoid (Imp Class))
@@ -66,7 +68,7 @@ def liftGen {Class : Type u → Type v} (s : Setoid (Imp Class))
     exact h
 
 @[inline]
-abbrev liftGenId {Class : Type u → Type v} (s : Setoid (Imp Class)) := liftGen s s id
+abbrev liftEndo {Class : Type u → Type v} (s : Setoid (Imp Class)) := liftGen s s id
 
 theorem liftGen_mk {Class : Type u → Type v} (s : Setoid (Imp Class))
     {Class' : Type u → Type v} (s' : Setoid (Imp Class'))
@@ -84,7 +86,7 @@ theorem iterate_liftGen_mk (n : Nat)
     (f : {imp : Type u} → (inst : Class imp) → imp → imp)
     (h : liftGen.Precondition s s id f)
     (x : Imp Class) :
-    ((liftGenId s f h)^[n] ⟦x⟧) = ⟦⟨x.imp, x.inst, ((f x.inst)^[n] x.value)⟩⟧ := by
+    ((liftEndo s f h)^[n] ⟦x⟧) = ⟦⟨x.imp, x.inst, ((f x.inst)^[n] x.value)⟩⟧ := by
   revert x
   induction n with
   | zero =>

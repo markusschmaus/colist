@@ -20,7 +20,7 @@ theorem exists_rep {α : Type u} (as : AnyPartialListLike α) : ∃ (β : Type v
   use x.value
   exact rep
 
-def isNil {α : Type u} : AnyPartialListLike α → Prop := AnyOf.lift (PartialListLike.instSetoid α) (·.isNil) <| by
+def isNil {α : Type u} : AnyPartialListLike α → Prop := ClassSetoid.lift (PartialListLike.instSetoid α) (·.isNil) <| by
   constructor
   · simp only [implies_true]
   · simp only [Setoid.r, heq_eq_eq, eq_iff_iff]
@@ -28,7 +28,7 @@ def isNil {α : Type u} : AnyPartialListLike α → Prop := AnyOf.lift (PartialL
     have := (h 0).isNil_eq
     simp_all only [Function.iterate_zero, id_eq]
 
-instance instDecidableIsNil {α : Type u} : (as : AnyPartialListLike α) → Decidable (isNil as) := AnyOf.lift (PartialListLike.instSetoid α) (·.instDecidableIsNil) <| by
+instance instDecidableIsNil {α : Type u} : (as : AnyPartialListLike α) → Decidable (isNil as) := ClassSetoid.lift (PartialListLike.instSetoid α) (·.instDecidableIsNil) <| by
   constructor
   · exact fun x => rfl
   · intro _ _ inst inst' x x' equiv
@@ -38,41 +38,41 @@ instance instDecidableIsNil {α : Type u} : (as : AnyPartialListLike α) → Dec
     apply Subsingleton.helim type_eq
 
 @[simp]
-theorem isNil_mk_imp {α : Type u} (x : AnyOf.Imp (PartialListLike α)) :
+theorem isNil_mk_imp {α : Type u} (x : ClassSetoid.Imp (PartialListLike α)) :
     isNil ⟦x⟧ ↔ x.inst.isNil x.value := by
   exact { mp := fun a => a, mpr := fun a => a }
 
 @[simp]
-theorem not_isNil_of_mk_imp {α : Type u} (x : AnyOf.Imp (PartialListLike α)) :
+theorem not_isNil_of_mk_imp {α : Type u} (x : ClassSetoid.Imp (PartialListLike α)) :
     ¬ x.inst.isNil x.value → ¬ isNil ⟦x⟧ := by
   exact fun a => a
 
-def head {α : Type u} : (as : AnyPartialListLike α) → ¬ isNil as → α := AnyOf.lift (PartialListLike.instSetoid α) (·.head) <| by
+def head {α : Type u} : (as : AnyPartialListLike α) → ¬ isNil as → α := ClassSetoid.lift (PartialListLike.instSetoid α) (·.head) <| by
   constructor
   · intro x
     have : HEq (isNil ⟦x⟧) (x.inst.isNil x.value) := by
       unfold isNil
-      refine AnyOf.lift_mk (PartialListLike.instSetoid α) (·.isNil) _ _ _
+      refine ClassSetoid.lift_mk (PartialListLike.instSetoid α) (·.isNil) _ _ _
     rw [eq_of_heq this]
   · simp only [Setoid.r]
     intro _ _ _ _ _ _ h
     have := (h 0).head_heq
     simp_all only [Function.iterate_zero, id_eq]
 
-def tail {α : Type u} : AnyPartialListLike α → AnyPartialListLike α := AnyOf.liftGenId (PartialListLike.instSetoid α) (·.tail) <| by
+def tail {α : Type u} : AnyPartialListLike α → AnyPartialListLike α := ClassSetoid.liftEndo (PartialListLike.instSetoid α) (·.tail) <| by
   simp_all [Setoid.r, PartialListLike.equiv, PartialListLike.equivExt]
   intro _ _ h n
   have := h n.succ
   simp_all only [Function.iterate_succ, Function.comp_apply]
 
 @[simp]
-theorem tail_mk_imp {α : Type u} (x : AnyOf.Imp (PartialListLike α)) :
+theorem tail_mk_imp {α : Type u} (x : ClassSetoid.Imp (PartialListLike α)) :
     tail ⟦x⟧ = ⟦⟨x.imp, x.inst, x.inst.tail x.value⟩⟧ := rfl
 
 @[simp]
-theorem iterate_tail_mk_imp (n : Nat) {α : Type u} (x : AnyOf.Imp (PartialListLike α)) :
+theorem iterate_tail_mk_imp (n : Nat) {α : Type u} (x : ClassSetoid.Imp (PartialListLike α)) :
     tail^[n] ⟦x⟧ = ⟦⟨x.imp, x.inst, (x.inst.tail^[n] x.value)⟩⟧ := by
-  apply AnyOf.iterate_liftGen_mk
+  apply ClassSetoid.iterate_liftGen_mk
   intro a b h n
   simp only [Setoid.r, PartialListLike.equiv, id_eq] at *
   exact h n.succ

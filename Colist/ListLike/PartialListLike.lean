@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Colist.AnyOf
+import Colist.ClassSetoid
 import Colist.Bool
 
 class PartialListLike (α : Type u) (β : Type v) : Type (max u v) where
@@ -16,13 +16,13 @@ namespace PartialListLike
 abbrev isFinite (α : Type u) {β : Type v} [inst : PartialListLike α β] (as : β) : Prop :=
   ∃ (n : ℕ), inst.isNil (inst.tail^[n] as)
 
-structure equivExt {α : Type u} (x₁ : AnyOf.Imp (PartialListLike α))
-    (x₂ : AnyOf.Imp (PartialListLike α)) : Prop where
+structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (PartialListLike α))
+    (x₂ : ClassSetoid.Imp (PartialListLike α)) : Prop where
   intro ::
   isNil_eq : x₁.inst.isNil x₁.value ↔ x₂.inst.isNil x₂.value
   head_heq : HEq (x₁.inst.head x₁.value) (x₂.inst.head x₂.value)
 
-instance equivExt.instSetoid {α : Type u} : Setoid (AnyOf.Imp <| PartialListLike α) where
+instance equivExt.instSetoid {α : Type u} : Setoid (ClassSetoid.Imp <| PartialListLike α) where
   r := equivExt
   iseqv := by
     constructor
@@ -40,11 +40,11 @@ instance equivExt.instSetoid {α : Type u} : Setoid (AnyOf.Imp <| PartialListLik
       · have := h₁₂.head_heq
         simp only [h₁₂.head_heq.trans h₂₃.head_heq]
 
-def equiv {α : Type u} (x₁ : AnyOf.Imp (PartialListLike α))
-    (x₂ : AnyOf.Imp (PartialListLike α)) : Prop :=
+def equiv {α : Type u} (x₁ : ClassSetoid.Imp (PartialListLike α))
+    (x₂ : ClassSetoid.Imp (PartialListLike α)) : Prop :=
   ∀ (n : ℕ), equivExt ⟨x₁.imp, x₁.inst, (x₁.inst.tail^[n] x₁.value)⟩ ⟨x₂.imp, x₂.inst, (x₂.inst.tail^[n] x₂.value)⟩
 
-instance instSetoid (α : Type u) : Setoid (AnyOf.Imp <| PartialListLike α) where
+instance instSetoid (α : Type u) : ClassSetoid (PartialListLike α) where
   r := equiv
   iseqv := by
     constructor

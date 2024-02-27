@@ -64,8 +64,8 @@ def map {α α': Type u} (f : α → α'): AnyPartialListLike α → AnyPartialL
     PartialListLike.Mapped.instPartialListLike (α := α) (α' := α')
   let map {imp : Type u} (inst : PartialListLike α imp) (x : imp) : PartialListLike.Mapped α α' imp :=
     PartialListLike.map f x (inst := inst)
-  AnyOf.liftGen (PartialListLike.instSetoid α) (PartialListLike.instSetoid α') inst' map <| by
-    simp_all only [AnyOf.liftGen.Precondition, Setoid.r, PartialListLike.equiv]
+  ClassSetoid.liftGen (PartialListLike.instSetoid α) (PartialListLike.instSetoid α') inst' map <| by
+    simp_all only [ClassSetoid.liftGen.Precondition, Setoid.r, PartialListLike.equiv]
     intro a b h n
     have isNil_eq := h n |>.isNil_eq
     have head_heq := h n |>.head_heq
@@ -87,5 +87,14 @@ def map {α α': Type u} (f : α → α'): AnyPartialListLike α → AnyPartialL
         refine (heq_of_cast_funext ?_).mpr head_heq ?_
         simp_all only
 
-instance : Functor AnyPartialListLike where
+instance instFunctor : Functor AnyPartialListLike where
   map := map
+
+-- instance instLawfulFunctor : LawfulFunctor AnyPartialListLike where
+--   map_const := by
+--     exact fun {α β} => rfl
+--   id_map x := by
+--     obtain ⟨x', rep⟩ := ClassSetoid.exists_rep x
+--     sorry
+--   comp_map f g x := by
+--     sorry

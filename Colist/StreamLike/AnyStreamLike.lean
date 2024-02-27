@@ -19,7 +19,7 @@ theorem exists_rep {α : Type u} (as : AnyStreamLike α) : ∃ (β : Type v)
   use x.inst
   use x.value
   exact rep
-def head {α : Type u} : (AnyStreamLike α) → α := AnyOf.lift (StreamLike.instSetoid α) (·.head) <| by
+def head {α : Type u} : (AnyStreamLike α) → α := ClassSetoid.lift (StreamLike.instSetoid α) (·.head) <| by
   constructor
   · intro x
     rfl
@@ -29,20 +29,20 @@ def head {α : Type u} : (AnyStreamLike α) → α := AnyOf.lift (StreamLike.ins
     have := (h 0).head_heq
     simp_all only [Function.iterate_zero, id_eq]
 
-def tail {α : Type u} : AnyStreamLike α → AnyStreamLike α := AnyOf.liftGenId (StreamLike.instSetoid α) (·.tail) <| by
+def tail {α : Type u} : AnyStreamLike α → AnyStreamLike α := ClassSetoid.liftEndo (StreamLike.instSetoid α) (·.tail) <| by
   simp_all [Setoid.r, StreamLike.equiv, StreamLike.equivExt]
   intro _ _ h n
   have := h n.succ
   simp_all only [Function.iterate_succ, Function.comp_apply]
 
 @[simp]
-theorem tail_mk_imp {α : Type u} (x : AnyOf.Imp (StreamLike α)) :
+theorem tail_mk_imp {α : Type u} (x : ClassSetoid.Imp (StreamLike α)) :
     tail ⟦x⟧ = ⟦⟨x.imp, x.inst, x.inst.tail x.value⟩⟧ := rfl
 
 @[simp]
-theorem iterate_tail_mk_imp (n : Nat) {α : Type u} (x : AnyOf.Imp (StreamLike α)) :
+theorem iterate_tail_mk_imp (n : Nat) {α : Type u} (x : ClassSetoid.Imp (StreamLike α)) :
     tail^[n] ⟦x⟧ = ⟦⟨x.imp, x.inst, (x.inst.tail^[n] x.value)⟩⟧ := by
-  apply AnyOf.iterate_liftGen_mk
+  apply ClassSetoid.iterate_liftGen_mk
   intro a b h n
   simp only [Setoid.r, StreamLike.equiv, id_eq] at *
   exact h n.succ

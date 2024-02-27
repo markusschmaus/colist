@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Colist.AnyOf
+import Colist.ClassSetoid
 import Colist.Bool
 
 class StreamLike (α : Type u) (β : Type v) : Type (max u v) where
@@ -8,12 +8,12 @@ class StreamLike (α : Type u) (β : Type v) : Type (max u v) where
 
 namespace StreamLike
 
-structure equivExt {α : Type u} (x₁ : AnyOf.Imp (StreamLike α))
-    (x₂ : AnyOf.Imp (StreamLike α)) : Prop where
+structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (StreamLike α))
+    (x₂ : ClassSetoid.Imp (StreamLike α)) : Prop where
   intro ::
   head_heq : x₁.inst.head x₁.value = x₂.inst.head x₂.value
 
-instance equivExt.instSetoid {α : Type u} : Setoid (AnyOf.Imp <| StreamLike α) where
+instance equivExt.instSetoid {α : Type u} : Setoid (ClassSetoid.Imp <| StreamLike α) where
   r := equivExt
   iseqv := by
     constructor
@@ -29,11 +29,11 @@ instance equivExt.instSetoid {α : Type u} : Setoid (AnyOf.Imp <| StreamLike α)
       have h₂₃' := h₂₃.head_heq
       simp_all only
 
-def equiv {α : Type u} (x₁ : AnyOf.Imp (StreamLike α))
-    (x₂ : AnyOf.Imp (StreamLike α)) : Prop :=
+def equiv {α : Type u} (x₁ : ClassSetoid.Imp (StreamLike α))
+    (x₂ : ClassSetoid.Imp (StreamLike α)) : Prop :=
   ∀ (n : ℕ), equivExt ⟨x₁.imp, x₁.inst, (x₁.inst.tail^[n] x₁.value)⟩ ⟨x₂.imp, x₂.inst, (x₂.inst.tail^[n] x₂.value)⟩
 
-instance instSetoid (α : Type u) : Setoid (AnyOf.Imp <| StreamLike α) where
+instance instSetoid (α : Type u) : ClassSetoid (StreamLike α) where
   r := equiv
   iseqv := by
     constructor

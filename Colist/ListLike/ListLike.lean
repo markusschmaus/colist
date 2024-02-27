@@ -8,13 +8,13 @@ class ListLike (α : Type u) (β : Type v) extends PartialListLike α β : Type 
 
 namespace ListLike
 
-structure equivExt {α : Type u} (x₁ : AnyOf.Imp (ListLike α))
-    (x₂ : AnyOf.Imp (ListLike α)) : Prop where
+structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (ListLike α))
+    (x₂ : ClassSetoid.Imp (ListLike α)) : Prop where
   intro ::
   isNil_eq : x₁.inst.isNil x₁.value ↔ x₂.inst.isNil x₂.value
   head_heq : HEq (x₁.inst.head x₁.value) (x₂.inst.head x₂.value)
 
-instance equivExt.instSetoid {α : Type u} : Setoid (AnyOf.Imp <| ListLike α) where
+instance equivExt.instSetoid {α : Type u} : Setoid (ClassSetoid.Imp <| ListLike α) where
   r := equivExt
   iseqv := by
     constructor
@@ -32,11 +32,11 @@ instance equivExt.instSetoid {α : Type u} : Setoid (AnyOf.Imp <| ListLike α) w
       · have := h₁₂.head_heq
         simp only [h₁₂.head_heq.trans h₂₃.head_heq]
 
-def equiv {α : Type u} (x₁ : AnyOf.Imp (ListLike α))
-    (x₂ : AnyOf.Imp (ListLike α)) : Prop :=
+def equiv {α : Type u} (x₁ : ClassSetoid.Imp (ListLike α))
+    (x₂ : ClassSetoid.Imp (ListLike α)) : Prop :=
   ∀ (n : ℕ), equivExt ⟨x₁.imp, x₁.inst, (x₁.inst.tail^[n] x₁.value)⟩ ⟨x₂.imp, x₂.inst, (x₂.inst.tail^[n] x₂.value)⟩
 
-instance instSetoid (α : Type u) : Setoid (AnyOf.Imp <| ListLike α) where
+instance instSetoid (α : Type u) : Setoid (ClassSetoid.Imp <| ListLike α) where
   r := equiv
   iseqv := by
     constructor
