@@ -2,26 +2,15 @@ import Colist.StreamLike.StreamLike
 
 universe u v w
 
-def AnyStreamLike (α : Type u) := Quotient (StreamLike.instSetoid α)
+abbrev AnyStreamLike (α : Type u) := (StreamLike.setoid α).Quotient
 
 namespace AnyStreamLike
 
-def mk {α : Type u} {β : Type v} [inst : StreamLike α β] (x : β): AnyStreamLike α :=
-  Quotient.mk (StreamLike.instSetoid α) ⟨β, inst, x⟩
+def mk {α : Type u} {β : Type v} [inst : StreamLike α β] (x : β) := (StreamLike.setoid α).mkQuotient x
 
-instance {α : Type u} {L : Type u → Type v} [StreamLike α (L α)] : CoeOut (L α) (AnyStreamLike α) where
-  coe := mk
-
-theorem exists_rep {α : Type u} (as : AnyStreamLike α) : ∃ (β : Type v)
-    (inst : StreamLike α β) (x : β), mk (inst := inst) x = as := by
-  obtain ⟨x, rep⟩ := Quotient.exists_rep as
-  use x.imp
-  use x.inst
-  use x.value
-  exact rep
-def head {α : Type u} : (AnyStreamLike α) → α := ClassSetoid.lift (StreamLike.instSetoid α) (·.head) <| by
+def head {α : Type u} : (AnyStreamLike α) → α := (StreamLike.setoid α).lift (·.head) <| by
   constructor
-  · intro x
+  · intro _
     rfl
   · simp only [Setoid.r]
     intro _ _ _ _ _ _ h
@@ -29,7 +18,7 @@ def head {α : Type u} : (AnyStreamLike α) → α := ClassSetoid.lift (StreamLi
     have := (h 0).head_heq
     simp_all only [Function.iterate_zero, id_eq]
 
-def tail {α : Type u} : AnyStreamLike α → AnyStreamLike α := ClassSetoid.liftEndo (StreamLike.instSetoid α) (·.tail) <| by
+def tail {α : Type u} : AnyStreamLike α → AnyStreamLike α := (StreamLike.setoid α).liftEndo (·.tail) <| by
   simp_all [Setoid.r, StreamLike.equiv, StreamLike.equivExt]
   intro _ _ h n
   have := h n.succ
@@ -58,4 +47,4 @@ theorem tail_mk {α : Type u} {β : Type v} [StreamLike α β] {x : β} :
 @[simp]
 theorem iterate_tail_mk (n : Nat) {α : Type u} {β : Type v} [inst : StreamLike α β] {x : β} :
     (StreamLike.tail α)^[n] (mk x : AnyStreamLike α) = mk ((StreamLike.tail α)^[n] x) := by
-  simp only [StreamLike.tail, mk, iterate_tail_mk_imp]
+  simp only [StreamLike.tail, mk, ClassSetoid.mkQuotient, iterate_tail_mk_imp]

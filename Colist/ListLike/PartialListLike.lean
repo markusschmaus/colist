@@ -44,7 +44,7 @@ def equiv {α : Type u} (x₁ : ClassSetoid.Imp (PartialListLike α))
     (x₂ : ClassSetoid.Imp (PartialListLike α)) : Prop :=
   ∀ (n : ℕ), equivExt ⟨x₁.imp, x₁.inst, (x₁.inst.tail^[n] x₁.value)⟩ ⟨x₂.imp, x₂.inst, (x₂.inst.tail^[n] x₂.value)⟩
 
-instance instSetoid (α : Type u) : ClassSetoid (PartialListLike α) where
+instance setoid (α : Type u) : ClassSetoid (PartialListLike α) where
   r := equiv
   iseqv := by
     constructor
