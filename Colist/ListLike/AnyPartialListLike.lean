@@ -36,7 +36,7 @@ abbrev head {α : Type u} : (as : AnyPartialListLike α) → ¬ isNil as → α 
   · intro x
     have : HEq (isNil ⟦x⟧) (x.inst.isNil x.value) := by
       unfold isNil
-      refine ClassSetoid.lift_mk_heq (PartialListLike.setoid α) (·.isNil) _ _ _
+      refine ClassSetoid.lift_mk_heq _
     rw [eq_of_heq this]
   · simp only [Setoid.r]
     intro _ _ _ _ _ _ h

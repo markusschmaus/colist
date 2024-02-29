@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 
-universe u v w
+universe u v w w'
 
 @[simp]
 def cast' {α β : Sort u} (a : α) (h : α = β) : β := cast h a
@@ -21,7 +21,6 @@ def mkQuotient {Class : Type u → Type v} (s : ClassSetoid Class) {imp : Type u
   Quotient.mk s ⟨imp, inst, x⟩
 
 set_option checkBinderAnnotations false in
-@[simp]
 theorem eq {Class : Type u → Type v} {s : ClassSetoid Class} {imp : Type u} [inst : Class imp] {imp' : Type u} [inst' : Class imp'] {x : imp}  {y : imp'}:
     mkQuotient (inst := inst) s x = mkQuotient (inst := inst') s y ↔ s.r ⟨_, inst, x⟩  ⟨_, inst', y⟩ := by
   unfold mkQuotient
@@ -65,13 +64,27 @@ def lift {Class : Type u → Type v} (s : ClassSetoid Class)
     simp_all only [Quotient.lift_mk (s := s)]
 
 @[simp]
-theorem lift_mk_heq {Class : Type u → Type v} (s : ClassSetoid Class)
+theorem lift_mk_heq {Class : Type u → Type v} {s : ClassSetoid Class}
     {β : {imp : Type u} → Class imp → imp → Type w}
-    (f : {imp : Type u} → (inst : Class imp) → (x : imp) → β inst x)
-    (out : Quotient s → Type w) (h : lift.Precondition s f out)
+    {f : {imp : Type u} → (inst : Class imp) → (x : imp) → β inst x}
+    {out : Quotient s → Type w} {h : lift.Precondition s f out}
     {imp : Type u} {inst : Class imp} (x : imp) :
     HEq (s.lift f h (s.mkQuotient (inst := inst) x)) (f inst x) := by
   refine cast_heq (lift.proof_3 s (fun {imp} => f) h (s.mkQuotient (inst := inst) x)) ?x
+
+@[simp]
+theorem lift_prop_mk {Class : Type u → Type v} (s : ClassSetoid Class)
+    {β : Type w}
+    {pᵢ : {imp : Type u} → Class imp → imp → Prop}
+    {f : {imp : Type u} → (inst : Class imp) → (x : imp) → pᵢ inst x → β}
+    {pₒ : Quotient s → Prop}
+    {h : lift.Precondition s f (fun x => pₒ x → β)}
+    {imp : Type u} {inst : Class imp} {x : imp}
+    {hᵢ : pᵢ _ _} {hₒ : pₒ _} :
+    s.lift f h (s.mkQuotient (inst := inst) x) hₒ = f inst x hᵢ := by
+  apply congr_heq
+  · simp only [lift_mk_heq]
+  · exact heq_prop hₒ hᵢ
 
 @[simp]
 theorem lift_mk {Class : Type u → Type v} (s : ClassSetoid Class)
@@ -81,7 +94,6 @@ theorem lift_mk {Class : Type u → Type v} (s : ClassSetoid Class)
     {imp : Type u} {inst : Class imp} (x : imp) :
     s.lift f h (s.mkQuotient (inst := inst) x) = f inst x :=
   rfl
-
 
 @[simp]
 abbrev liftGen.Precondition {Class : Type u → Type v} (s : ClassSetoid Class)

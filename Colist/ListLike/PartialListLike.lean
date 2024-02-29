@@ -16,6 +16,34 @@ namespace PartialListLike
 abbrev isFinite (α : Type u) {β : Type v} [inst : PartialListLike α β] (as : β) : Prop :=
   ∃ (n : ℕ), inst.isNil (inst.tail^[n] as)
 
+@[simp]
+theorem isFinite_tail {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β} :
+    isFinite α (inst.tail as) ↔ isFinite α as := by
+  simp only [isFinite]
+  constructor
+  · intro ⟨n, is_nil⟩
+    use n.succ
+    simp_all only [Function.iterate_succ_apply]
+  · intro ⟨n, is_nil⟩
+    use n.pred
+    by_cases n_zero : n = 0
+    · have := inst.terminal_isNil
+      simp_all only [Function.iterate_zero, id_eq, Nat.pred_zero]
+    · rw [←Nat.succ_pred n_zero] at is_nil
+      simp_all only [Function.iterate_succ, Function.comp_apply]
+
+@[simp]
+theorem isFinite_iterate_tail {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β} {n : ℕ} :
+    isFinite α (inst.tail^[n] as) ↔ isFinite α as := by
+  revert as
+  induction n with
+  | zero =>
+    intro as
+    simp only [Nat.zero_eq, Function.iterate_zero, id_eq]
+  | succ n ih =>
+    intro as
+    simp_all only [Function.iterate_succ, Function.comp_apply, isFinite_tail]
+
 structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (PartialListLike α))
     (x₂ : ClassSetoid.Imp (PartialListLike α)) : Prop where
   intro ::

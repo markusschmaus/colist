@@ -5,8 +5,45 @@ universe u v w
 
 class ListLike (α : Type u) (β : Type v) extends PartialListLike α β : Type (max u v) where
   finite (as : β) : PartialListLike.isFinite α as
-
 namespace ListLike
+
+abbrev FinitePartialListLike (α : Type u) (β : Type v) [inst : PartialListLike α β] :=
+  Subtype fun as : β => PartialListLike.isFinite (inst := inst) as
+
+instance instSubtypePartialListLike (α : Type u) (β : Type v) [inst : PartialListLike α β] :
+    PartialListLike α (FinitePartialListLike α β) where
+  isNil as := inst.isNil as.val
+  head as := inst.head as.val
+  tail as := Subtype.mk (inst.tail as.val) <| by
+    obtain ⟨n, val_nil⟩ := as.property
+    use n.pred
+    rw [←Function.iterate_succ_apply]
+    by_cases n_zero : n = 0
+    · subst n_zero
+      have := inst.terminal_isNil as.val
+      simp_all only [Function.iterate_zero, id_eq, forall_true_left, Nat.pred_zero,
+        Function.iterate_succ, Function.comp_apply]
+    · have := Nat.succ_pred n_zero
+      simp_all only
+  terminal_isNil as := inst.terminal_isNil as.val
+
+instance instSubtypeListLike (α : Type u) (β : Type v) [inst : PartialListLike α β] :
+    ListLike α (FinitePartialListLike α β) where
+  toPartialListLike := instSubtypePartialListLike α β
+  finite as := by
+    unfold PartialListLike.isFinite at *
+    obtain ⟨n, val_nil⟩ := as.property
+    use n
+    revert as val_nil
+    induction n with
+    | zero =>
+      intro as val_nil
+      exact val_nil
+    | succ n ih =>
+      intro as val_nil
+      have := ih (PartialListLike.tail α as) val_nil
+      simp_all only [Subtype.forall, forall_exists_index, Function.iterate_succ,
+        Function.comp_apply]
 
 structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (ListLike α))
     (x₂ : ClassSetoid.Imp (ListLike α)) : Prop where
