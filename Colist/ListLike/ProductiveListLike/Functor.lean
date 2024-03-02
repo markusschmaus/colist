@@ -19,7 +19,7 @@ instance Mapped.instProductiveListLike {α α' : Type u} {β : Type v} :
 
 @[simp]
 theorem isNil_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
-    PartialListLike.isNil α' x ↔ x.inst.isNil x.base := { mp := fun a => a, mpr := fun a => a }
+    PartialListLike.isNil x ↔ x.inst.isNil x.base := { mp := fun a => a, mpr := fun a => a }
 
 @[simp]
 theorem head_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} {h : _}:
@@ -27,11 +27,11 @@ theorem head_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} {h : 
 
 @[simp]
 theorem tail_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
-    (PartialListLike.tail α' x) = Mapped.mk (inst := x.inst) (x.inst.tail x.base) x.f := rfl
+    (PartialListLike.tail x) = Mapped.mk (inst := x.inst) (x.inst.tail x.base) x.f := rfl
 
 @[simp]
 theorem iterate_tail_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} {n : Nat} :
-    ((PartialListLike.tail α')^[n] x) = Mapped.mk (inst := x.inst)
+    (PartialListLike.tail^[n] x) = Mapped.mk (inst := x.inst)
     (x.inst.tail^[n] x.base) x.f := by
   revert x
   induction n with
@@ -44,7 +44,7 @@ theorem iterate_tail_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' �
 
 @[simp]
 theorem isFinite_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
-    PartialListLike.isFinite α' x ↔ PartialListLike.isFinite
+    PartialListLike.isFinite x ↔ PartialListLike.isFinite
     (inst := x.inst.toPartialListLike) x.base := by
   constructor
   · intro ⟨n, tail_nil⟩
@@ -56,7 +56,7 @@ theorem isFinite_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
       exact tail_nil
     | succ n ih =>
       intro x tail_nil
-      have := ih (x := PartialListLike.tail α' x)
+      have := ih (x := PartialListLike.tail x)
       simp_all only [iterate_tail_Mapped, isNil_Mapped, implies_true, Function.iterate_succ,
         Function.comp_apply, tail_Mapped, forall_true_left]
   · intro ⟨n, tail_nil⟩
@@ -68,7 +68,7 @@ theorem isFinite_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
       exact tail_nil
     | succ n ih =>
       intro x tail_nil
-      have := ih (x := PartialListLike.tail α' x)
+      have := ih (x := PartialListLike.tail x)
       simp_all only [iterate_tail_Mapped, isNil_Mapped, implies_true, Function.iterate_succ,
         Function.comp_apply, tail_Mapped, forall_true_left]
 
@@ -89,22 +89,22 @@ theorem f_map {α α' : Type u} {β : Type v} [inst : ProductiveListLike α β]
 @[simp]
 theorem isNil_map {α α' : Type u} {β : Type v} [inst : ProductiveListLike α β]
     {f : α → α'} {b : β} :
-    PartialListLike.isNil α' (map f b) = PartialListLike.isNil α b := rfl
+    PartialListLike.isNil (map f b) = PartialListLike.isNil b := rfl
 
 @[simp]
 theorem head_map {α α' : Type u} {β : Type v} [inst : ProductiveListLike α β]
-    {f : α → α'} {b : β} {h : ¬ PartialListLike.isNil α b} :
+    {f : α → α'} {b : β} {h : ¬ PartialListLike.isNil b} :
     PartialListLike.head (α := α') (map f b) h = f (PartialListLike.head b h) := rfl
 
 @[simp]
 theorem tail_map {α α' : Type u} {β : Type v} [inst : ProductiveListLike α β]
     {f : α → α'} {b : β} :
-    PartialListLike.tail α' (map f b) = map f (PartialListLike.tail α b) := rfl
+    PartialListLike.tail (map f b) = map f (PartialListLike.tail b) := rfl
 
 @[simp]
 theorem iterate_tail_map {α α' : Type u} {β : Type v}
     [inst : ProductiveListLike α β] {f : α → α'} {b : β} {n : Nat} :
-    (PartialListLike.tail α')^[n] (map f b) = map f ((PartialListLike.tail α)^[n] b) := by
+    PartialListLike.tail^[n] (map f b) = map f (PartialListLike.tail^[n] b) := by
   revert b
   induction n with
   | zero =>
@@ -117,7 +117,7 @@ theorem iterate_tail_map {α α' : Type u} {β : Type v}
 @[simp]
 theorem isFinite_map {α α' : Type u} {β : Type v} [ProductiveListLike α β]
     {f : α → α'} {b : β} {n : Nat} :
-    PartialListLike.isFinite α' (map f b) ↔ PartialListLike.isFinite α b := by
+    PartialListLike.isFinite (map f b) ↔ PartialListLike.isFinite b := by
   simp only [isFinite_Mapped, base_map]
 
 end ProductiveListLike
@@ -193,7 +193,7 @@ theorem tail_map {α α': Type u} (f : α → α') (x : AnyProductiveListLike α
 
 @[simp]
 theorem isFinite_map {α α': Type u} (f : α → α') (x : AnyProductiveListLike α) :
-    PartialListLike.isFinite α' (f <$> x) ↔ PartialListLike.isFinite α x := by
+    PartialListLike.isFinite (f <$> x) ↔ PartialListLike.isFinite x := by
   obtain ⟨imp, inst, x', rep⟩ := (ProductiveListLike.setoid _).exists_rep x
   rw [←rep]
   simp only [map_mk, mk, isFinite_mk, ProductiveListLike.isFinite_Mapped,

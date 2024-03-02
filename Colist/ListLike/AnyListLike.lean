@@ -5,7 +5,7 @@ import Colist.util.Subtype
 universe u v
 
 abbrev AnyListLike (α : Type u) :=
-  Subtype (fun (as : AnyProductiveListLike α) => PartialListLike.isFinite α as)
+  Subtype (fun (as : AnyProductiveListLike α) => PartialListLike.isFinite as)
 
 namespace AnyListLike
 
@@ -33,7 +33,7 @@ abbrev tail {α : Type u} : AnyListLike α → AnyListLike α := Subtype.map Any
     exact inst.terminal_isNil x' is_nil
 
 instance {α : Type u} : ListLike α (AnyListLike α) where
-  isNil x := PartialListLike.isNil α x.val
+  isNil x := PartialListLike.isNil x.val
   head x := PartialListLike.head x.val
   tail := tail
   terminal_isNil x := ProductiveListLike.terminal_isNil (α := α) x.val

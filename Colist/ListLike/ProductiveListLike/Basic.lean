@@ -1,28 +1,28 @@
 import Colist.ListLike.PartialListLike.Basic
 
 
-class ProductiveListLike (α : Type u) (β : Type v) extends PartialListLike α β : Type (max u v) where
+class ProductiveListLike (α : outParam (Type u)) (β : Type v) extends PartialListLike α β : Type (max u v) where
   terminal_isNil (as : β) : isNil as → isNil (tail as)
 
 namespace ProductiveListLike
 
 theorem iterate_terminal_isNil {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
     (as : β) (n : ℕ) :
-    PartialListLike.isNil α as → PartialListLike.isNil α ((PartialListLike.tail α)^[n] as) := by
+    PartialListLike.isNil as → PartialListLike.isNil (PartialListLike.tail^[n] as) := by
   revert as
   induction n with
   | zero =>
     simp_all only [Nat.zero_eq, Function.iterate_zero, id_eq, implies_true]
   | succ n ih =>
     intro as
-    have := ih (as := PartialListLike.tail α as)
+    have := ih (as := PartialListLike.tail as)
     have := inst.terminal_isNil (as := as)
     simp_all only [implies_true, Function.iterate_succ, Function.comp_apply]
 
 
 @[simp]
 theorem isFinite_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α β] {as : β} :
-    PartialListLike.isFinite α (inst.tail as) ↔ PartialListLike.isFinite α as := by
+    PartialListLike.isFinite (inst.tail as) ↔ PartialListLike.isFinite as := by
   simp only [PartialListLike.isFinite]
   constructor
   · intro ⟨n, is_nil⟩
@@ -38,7 +38,7 @@ theorem isFinite_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α 
 
 @[simp]
 theorem isFinite_iterate_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α β] {as : β} {n : ℕ} :
-    PartialListLike.isFinite α (inst.tail^[n] as) ↔ PartialListLike.isFinite α as := by
+    PartialListLike.isFinite (inst.tail^[n] as) ↔ PartialListLike.isFinite as := by
   revert as
   induction n with
   | zero =>

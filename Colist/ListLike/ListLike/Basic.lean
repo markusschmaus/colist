@@ -3,8 +3,8 @@ import Colist.ListLike.ProductiveListLike.Basic
 
 universe u v w
 
-class ListLike (α : Type u) (β : Type v) extends ProductiveListLike α β : Type (max u v) where
-  finite (as : β) : PartialListLike.isFinite α as
+class ListLike (α : outParam (Type u)) (β : Type v) extends ProductiveListLike α β : Type (max u v) where
+  finite (as : β) : PartialListLike.isFinite as
 namespace ListLike
 
 abbrev FiniteProductiveListLike (α : Type u) (β : Type v) [inst : PartialListLike α β] :=
@@ -41,7 +41,7 @@ instance instSubtypeListLike (α : Type u) (β : Type v) [inst : ProductiveListL
       exact val_nil
     | succ n ih =>
       intro as val_nil
-      have := ih (PartialListLike.tail α as) val_nil
+      have := ih (PartialListLike.tail as) val_nil
       simp_all only [Subtype.forall, forall_exists_index, Function.iterate_succ,
         Function.comp_apply]
 

@@ -1,4 +1,6 @@
 import Colist.ListLike.AnyListLike
+import Colist.ListLike.ProductiveListLike.Mem
+import Colist.ListLike.ProductiveListLike.Pairwise
 import Colist.util.Option
 import Colist.util.Function
 
@@ -221,6 +223,39 @@ instance instListLike {α : Type u} {β : Type v} :
     refine' nil_of_baseTail_nil (tail^[n] as) _
     simp_all only [le_add_iff_nonneg_left, zero_le, iterate_tail_inst]
 
+end Filtered
+
 abbrev filter {α : Type u} {β : Type v} [ListLike α β] (p : α → Prop)
     [DecidablePred p] (as : β) : Filtered α β :=
-  tailX <| PartialFiltered.mk p none as
+  Filtered.tailX <| PartialFiltered.mk p none as
+
+theorem exists_iterate_tail_eq {α : Type u} {β : Type v} [ListLike α β]
+    (p : α → Prop) [DecidablePred p] (as : β) (n : Nat) :
+    ∃ (m : Nat), (PartialListLike.tail^[n] (filter p as)) = filter p (PartialListLike.tail^[m] as) := by
+  revert as
+  induction n with
+  | zero =>
+    intro as
+    use 0
+    simp only [Nat.zero_eq, Function.iterate_zero, id_eq]
+  | succ n ih =>
+    simp only [PartialListLike.tail, Function.iterate_succ, Function.comp_apply]
+    intro as
+    replace ⟨k, ih⟩ := ih as
+    have ⟨j, ⟨hit, _⟩⟩ := Filtered.tailX (Filtered.tail^[n] (filter p as)).toPartialFiltered |>.property
+    have := hit.tail_eq
+    rw [←Filtered.tail] at this
+    use k + j
+    simp_all?
+    sorry
+
+theorem mem_filter {α : Type u} {β : Type v} [ListLike α β] (p : α → Prop)
+    [DecidablePred p] (as : β) (a : α) :
+    a ∈ filter p as ↔ a ∈ as ∧ p a := by
+  constructor
+  · simp [ProductiveListLike.Mem, Membership.mem]
+    intro n nil_filter a_def
+    subst a_def
+
+    sorry
+  · sorry

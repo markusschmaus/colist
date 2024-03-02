@@ -2,7 +2,7 @@ import Mathlib.Tactic
 import Colist.ClassSetoid
 import Colist.util.Bool
 
-class PartialListLike (α : Type u) (β : Type v) : Type (max u v) where
+class PartialListLike (α : outParam (Type u)) (β : Type v) : Type (max u v) where
   isNil : β → Prop
   [instDecidableIsNil (as : β) : Decidable (isNil as)]
   head (as : β) : ¬ isNil as → α
@@ -12,8 +12,12 @@ instance {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β}: D
 
 namespace PartialListLike
 
-abbrev isFinite (α : Type u) {β : Type v} [inst : PartialListLike α β] (as : β) :
+abbrev isFinite {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β) :
     Prop := ∃ (n : ℕ), inst.isNil (inst.tail^[n] as)
+
+abbrev head? {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β) :
+    Option α :=
+  if h : inst.isNil as then none else some (inst.head as h)
 
 structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (PartialListLike α))
     (x₂ : ClassSetoid.Imp (PartialListLike α)) : Prop where

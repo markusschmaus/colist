@@ -2,14 +2,14 @@ import Colist.util.HEq
 import Colist.ListLike.AnyProductiveListLike
 import Colist.ListLike.AnyListLike
 import Colist.ListLike.Instances.List
-import Colist.ListLike.ProductiveListLike.Basic.Functor
+import Colist.ListLike.ProductiveListLike.Functor
 
 universe u v
 
 namespace ListLike
 
 abbrev Mapped (α α' : Type u) (β : Type v) :=
-  Subtype (fun x : ProductiveListLike.Mapped α α' β => PartialListLike.isFinite α' x)
+  Subtype (fun x : ProductiveListLike.Mapped α α' β => PartialListLike.isFinite x)
 
 @[simp]
 theorem mk_val_inst_Mapped {α α' : Type u} {β : Type v}
@@ -18,7 +18,7 @@ theorem mk_val_inst_Mapped {α α' : Type u} {β : Type v}
 
 @[simp]
 theorem iterate_tail_inst_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} {n : Nat}  :
-    ((PartialListLike.tail α')^[n] x).val.inst = x.val.inst := by
+    (PartialListLike.tail^[n] x).val.inst = x.val.inst := by
   revert x
   induction n with
   | zero =>
@@ -26,13 +26,13 @@ theorem iterate_tail_inst_Mapped {α α' : Type u} {β : Type v} {x : Mapped α 
     rfl
   | succ n ih =>
     intro x
-    have := ih (x := PartialListLike.tail α' x)
+    have := ih (x := PartialListLike.tail x)
     simp_all only [Function.iterate_succ, Function.comp_apply]
     exact rfl
 
 @[simp]
 theorem iterate_tail_f_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} {n : Nat}  :
-    ((PartialListLike.tail α')^[n] x).val.f = x.val.f := by
+    (PartialListLike.tail^[n] x).val.f = x.val.f := by
   revert x
   induction n with
   | zero =>
@@ -40,26 +40,26 @@ theorem iterate_tail_f_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α'
     rfl
   | succ n ih =>
     intro x
-    have := ih (x := PartialListLike.tail α' x)
+    have := ih (x := PartialListLike.tail x)
     simp_all only [Function.iterate_succ, Function.comp_apply]
     exact rfl
 
 @[simp]
 theorem isNil_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
-    PartialListLike.isNil α' x ↔ PartialListLike.isNil α' x.val :=
+    PartialListLike.isNil x ↔ PartialListLike.isNil x.val :=
   { mp := fun a => a, mpr := fun a => a }
 
 @[simp]
 theorem head_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} {h : _}:
-    PartialListLike.head x h = PartialListLike.head (α := α') x.val h := rfl
+    PartialListLike.head x h = PartialListLike.head x.val h := rfl
 
 @[simp]
 theorem tail_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
-    PartialListLike.tail α' x = (PartialListLike.tail α' x.val) := rfl
+    PartialListLike.tail x = (PartialListLike.tail x.val) := rfl
 
 @[simp]
 theorem iterate_tail_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} {n : Nat} :
-    ((PartialListLike.tail α')^[n] x) = ((PartialListLike.tail α')^[n] x.val) := by
+    (PartialListLike.tail^[n] x) = (PartialListLike.tail^[n] x.val) := by
   revert x
   induction n with
   | zero =>

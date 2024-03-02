@@ -32,8 +32,8 @@ instance instDecidableIsNil {α : Type u} :
   · intro _ _ inst inst' x x' equiv
     have isNil_eq := equiv 0 |>.isNil_eq
     have type_eq :
-        Decidable (PartialListLike.isNil α x) =
-        Decidable (PartialListLike.isNil α x') := by
+        Decidable (PartialListLike.isNil x) =
+        Decidable (PartialListLike.isNil x') := by
       simp_all only [Function.iterate_zero, id_eq]
     apply Subsingleton.helim type_eq
 
@@ -73,6 +73,6 @@ instance instProductiveListLike {α : Type u} :
 
 @[simp]
 theorem isFinite_mk {α : Type u} {β : Type v} [ProductiveListLike α β] {x : β} :
-    PartialListLike.isFinite α (mk x : AnyProductiveListLike α) ↔ PartialListLike.isFinite α x := by
+    PartialListLike.isFinite (mk x : AnyProductiveListLike α) ↔ PartialListLike.isFinite x := by
   simp only [PartialListLike.isFinite, PartialListLike.isNil, PartialListLike.tail,
     ClassSetoid.iterate_liftEndo_mk, ClassSetoid.lift_mk]
