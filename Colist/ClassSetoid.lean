@@ -14,6 +14,11 @@ abbrev ClassSetoid (Class : Type u → Type v) := Setoid (ClassSetoid.Imp Class)
 
 namespace ClassSetoid
 
+abbrev Imp.subst {Class : Type u → Type v} {Class' : Type u → Type v}
+    (x : ClassSetoid.Imp Class) (inst' : Class' x.imp):
+    ClassSetoid.Imp Class' :=
+  ⟨x.imp, inst', x.value⟩
+
 def Quotient {Class : Type u → Type v} (s : ClassSetoid Class) := _root_.Quotient s
 
 set_option checkBinderAnnotations false in

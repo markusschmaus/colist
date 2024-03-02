@@ -1,24 +1,25 @@
-import Colist.ListLike.AnyPartialListLike
-import Colist.ListLike.ListLike
-import Colist.Subtype
+import Colist.ListLike.AnyProductiveListLike
+import Colist.ListLike.ListLike.Basic
+import Colist.util.Subtype
 
 universe u v
 
-abbrev AnyListLike (α : Type u) := Subtype (fun (as : AnyPartialListLike α) => PartialListLike.isFinite α as)
+abbrev AnyListLike (α : Type u) :=
+  Subtype (fun (as : AnyProductiveListLike α) => PartialListLike.isFinite α as)
 
 namespace AnyListLike
 
 abbrev mk {α : Type u} {β : Type v} [inst : ListLike α β] (x : β) : AnyListLike α :=
-  Subtype.mk (AnyPartialListLike.mk x) <| by
-    simp only [AnyPartialListLike.isFinite_mk, inst.finite]
+  Subtype.mk (AnyProductiveListLike.mk x) <| by
+    simp only [AnyProductiveListLike.isFinite_mk, inst.finite]
 
 instance {α : Type u} {L : Type u → Type v} [ListLike α (L α)] : CoeOut (L α) (AnyListLike α) where
   coe := mk
 
-abbrev tail {α : Type u} : AnyListLike α → AnyListLike α := Subtype.map AnyPartialListLike.tail <| by
+abbrev tail {α : Type u} : AnyListLike α → AnyListLike α := Subtype.map AnyProductiveListLike.tail <| by
   intro x finite
   obtain ⟨n, is_nil⟩ := finite
-  obtain ⟨_, inst, x', rep⟩ := PartialListLike.setoid α |>.exists_rep x
+  obtain ⟨_, inst, x', rep⟩ := ProductiveListLike.setoid α |>.exists_rep x
   rw [←rep] at is_nil ⊢
   use n.pred
   simp only [PartialListLike.isNil, PartialListLike.tail, ClassSetoid.liftGen_mk, id_eq,
@@ -35,7 +36,7 @@ instance {α : Type u} : ListLike α (AnyListLike α) where
   isNil x := PartialListLike.isNil α x.val
   head x := PartialListLike.head x.val
   tail := tail
-  terminal_isNil x := PartialListLike.terminal_isNil x.val
+  terminal_isNil x := ProductiveListLike.terminal_isNil (α := α) x.val
   finite x := by
     have finite := x.property
     unfold PartialListLike.isFinite at *

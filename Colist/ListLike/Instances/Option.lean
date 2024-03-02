@@ -1,9 +1,7 @@
-import Colist.ListLike.ListLike
+import Colist.ListLike.ListLike.Basic
+import Colist.util.Option
 
 universe u
-
-instance {α : Type u} {as : Option α} : Decidable (as = none) :=
-  decidableFromBool Option.isNone Option.isNone_iff_eq_none
 
 instance instListListLike {α : Type u} : ListLike α (Option α) where
   isNil as := as = none

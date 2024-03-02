@@ -1,9 +1,6 @@
-import Colist.ListLike.ListLike
-
+import Colist.ListLike.ListLike.Basic
+import Colist.util.List
 universe u
-
-instance {α : Type u} {as : List α} : Decidable (as = []) :=
-  decidableFromBool List.isEmpty List.isEmpty_iff_eq_nil
 
 instance instListListLike {α : Type u} : ListLike α (List α) where
   isNil as := as = []

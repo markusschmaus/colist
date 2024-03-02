@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 import Colist.ClassSetoid
-import Colist.Bool
+import Colist.util.Bool
 
 class StreamLike (α : Type u) (β : Type v) : Type (max u v) where
   head : β → α
