@@ -10,12 +10,20 @@ structure Mapped (α α' : Type u) (β : Type v) where
   base : β
   f : α → α'
 
-instance Mapped.instProductiveListLike {α α' : Type u} {β : Type v} :
-    ProductiveListLike α' (Mapped α α' β) where
-  isNil x := x.inst.isNil x.base
-  head x h := x.f <| x.inst.head x.base h
-  tail x := {base := x.inst.tail x.base, inst := x.inst, f := x.f}
-  terminal_isNil x := x.inst.terminal_isNil x.base
+namespace Mapped
+
+instance instMembership {α α' : Type u} {β : Type v} :
+    Membership α' (Mapped α α' β) where
+  mem a' as := ∃ a : α, a' = as.f a ∧ as.inst.instMembership.mem a as.base
+
+instance instPartialListLike {α α' : Type u} {β : Type v} :
+    PartialListLike α' (Mapped α α' β) where
+  isNil as := as.inst.isNil as.base
+  head as h := as.f <| as.inst.head as.base h
+  tail as := {base := as.inst.tail as.base, inst := as.inst, f := as.f}
+
+theorem mk.explode {α α' : Type u} {β : Type v} (as : Mapped α α' β) :
+    as = Mapped.mk (inst := as.inst) as.base as.f := rfl
 
 @[simp]
 theorem isNil_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
@@ -72,6 +80,48 @@ theorem isFinite_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' β} :
       simp_all only [iterate_tail_Mapped, isNil_Mapped, implies_true, Function.iterate_succ,
         Function.comp_apply, tail_Mapped, forall_true_left]
 
+
+@[simp]
+theorem Mem_Mapped {α α' : Type u} {β : Type v} {as : Mapped α α' β} {a' : α'}:
+    PartialListLike.Mem (a') as ↔
+    ∃ a : α, a' = as.f a ∧ PartialListLike.Mem (inst := as.inst.toPartialListLike) a as.base := by
+  constructor
+  · unfold PartialListLike.Mem
+    simp only [iterate_tail_Mapped, head_Mapped, isNil_Mapped]
+    intro ⟨n, is_nil, eq⟩
+    use (as.inst.head (as.inst.tail^[n] as.base) ?not_nil)
+    rotate_right
+    · simp_all only [not_false_eq_true]
+    simp_all only [true_and]
+    use n
+    simp_all only [not_false_eq_true, exists_const]
+  · unfold PartialListLike.Mem
+    simp only [iterate_tail_Mapped, head_Mapped, isNil_Mapped]
+    intro ⟨a, ⟨eq', ⟨n, ⟨is_nil, eq⟩⟩⟩⟩
+    use n
+    simp_all only [not_false_eq_true, exists_const]
+
+instance instProductiveListLike {α α' : Type u} {β : Type v} :
+    ProductiveListLike α' (Mapped α α' β) where
+  isNil as := as.inst.isNil as.base
+  head as h := as.f <| as.inst.head as.base h
+  tail as := {base := as.inst.tail as.base, inst := as.inst, f := as.f}
+  consistent_mem a' as := by
+    simp?
+    constructor
+    · intro ⟨a, ⟨_, _⟩⟩
+      have := as.inst.consistent_mem a as.base
+      simp only [Membership.mem]
+      use a
+      simp_all only [iff_true, and_self]
+    · intro ⟨a, ⟨_, _⟩⟩
+      have := as.inst.consistent_mem a as.base
+      use a
+      simp_all only [iff_true, and_self]
+  terminal_isNil as := as.inst.terminal_isNil as.base
+
+end Mapped
+
 def map {α α' : Type u} {β : Type v} [inst : ProductiveListLike α β] (f : α → α')
     (b : β) : Mapped α α' β :=
   {base := b, inst := inferInstance, f := f}
@@ -118,7 +168,7 @@ theorem iterate_tail_map {α α' : Type u} {β : Type v}
 theorem isFinite_map {α α' : Type u} {β : Type v} [ProductiveListLike α β]
     {f : α → α'} {b : β} {n : Nat} :
     PartialListLike.isFinite (map f b) ↔ PartialListLike.isFinite b := by
-  simp only [isFinite_Mapped, base_map]
+  simp only [Mapped.isFinite_Mapped, base_map]
 
 end ProductiveListLike
 
@@ -172,7 +222,7 @@ theorem isNil_map {α α': Type u} {f : α → α'} {x : AnyProductiveListLike �
     AnyProductiveListLike.isNil (f <$> x) ↔ AnyProductiveListLike.isNil x := by
   obtain ⟨imp, inst, x', rep⟩ := (ProductiveListLike.setoid _).exists_rep x
   subst rep
-  simp only [map_mk, mk, ClassSetoid.lift_mk, ProductiveListLike.isNil_Mapped,
+  simp only [map_mk, mk, ClassSetoid.lift_mk, ProductiveListLike.Mapped.isNil_Mapped,
     ProductiveListLike.base_map]
 
 @[simp]
@@ -196,7 +246,7 @@ theorem isFinite_map {α α': Type u} (f : α → α') (x : AnyProductiveListLik
     PartialListLike.isFinite (f <$> x) ↔ PartialListLike.isFinite x := by
   obtain ⟨imp, inst, x', rep⟩ := (ProductiveListLike.setoid _).exists_rep x
   rw [←rep]
-  simp only [map_mk, mk, isFinite_mk, ProductiveListLike.isFinite_Mapped,
+  simp only [map_mk, mk, isFinite_mk, ProductiveListLike.Mapped.isFinite_Mapped,
     ProductiveListLike.base_map]
 
 instance instLawfulFunctor : LawfulFunctor AnyProductiveListLike where

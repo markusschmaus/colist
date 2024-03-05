@@ -7,6 +7,7 @@ class PartialListLike (α : outParam (Type u)) (β : Type v) : Type (max u v) wh
   [instDecidableIsNil (as : β) : Decidable (isNil as)]
   head (as : β) : ¬ isNil as → α
   tail : β → β
+  [instMembership : Membership α β]
 
 instance {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β}: Decidable (inst.isNil as) := inst.instDecidableIsNil as
 
@@ -15,9 +16,50 @@ namespace PartialListLike
 abbrev isFinite {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β) :
     Prop := ∃ (n : ℕ), inst.isNil (inst.tail^[n] as)
 
+abbrev Mem {α : Type u} {β : Type v} [inst : PartialListLike α β] (a : α) (as : β) :
+    Prop := ∃ (n : Nat) (is_nil : _), a = PartialListLike.head (PartialListLike.tail^[n] as) is_nil
+
+def contains {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β) (a : α) :
+    Prop := inst.instMembership.mem a as
+
+theorem contains_of_mem {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β} {a : α} :
+    inst.instMembership.mem a as ↔ inst.contains as a := ⟨fun a => a, fun a => a⟩
+
 abbrev head? {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β) :
     Option α :=
   if h : inst.isNil as then none else some (inst.head as h)
+
+@[simp]
+theorem head?_not_nil {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} (not_nil : ¬ PartialListLike.isNil as) :
+    head? as = some (PartialListLike.head as not_nil) := by
+  simp_all only [head?, dite_false]
+
+@[simp]
+theorem head?_nil {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} (nil : PartialListLike.isNil as) :
+    head? as = none := by
+  simp_all only [head?, dite_true]
+
+theorem head_eq_of_some_head?_eq {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} {head : α} : inst.head? as = some head →
+    ∃ not_nil : ¬ inst.isNil as, inst.head as not_nil = head := by
+  intro head?_eq
+  have not_nil : ¬ inst.isNil as := by
+    revert head?_eq
+    apply imp_not_comm.mp
+    intro is_nil
+    rw [head?_nil]
+    · simp_all only [not_false_eq_true]
+    · simp_all only
+  use not_nil
+  simp_all only [not_false_eq_true, head?_not_nil, Option.some.injEq]
+
+theorem some_head?_eq_of_head_eq {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} {head : α} {not_nil : ¬ inst.isNil as} : inst.head as not_nil = head →
+    inst.head? as = some head := by
+  intro head_eq
+  simp_all only [not_false_eq_true, head?_not_nil]
 
 structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (PartialListLike α))
     (x₂ : ClassSetoid.Imp (PartialListLike α)) : Prop where

@@ -33,10 +33,14 @@ abbrev tail {α : Type u} : AnyListLike α → AnyListLike α := Subtype.map Any
     exact inst.terminal_isNil x' is_nil
 
 instance {α : Type u} : ListLike α (AnyListLike α) where
-  isNil x := PartialListLike.isNil x.val
-  head x := PartialListLike.head x.val
+  isNil as := PartialListLike.isNil as.val
+  head as := PartialListLike.head as.val
   tail := tail
-  terminal_isNil x := ProductiveListLike.terminal_isNil (α := α) x.val
+  terminal_isNil as := ProductiveListLike.terminal_isNil as.val
+  consistent_mem a as := by
+    have consistent := ProductiveListLike.consistent_mem a as.val
+    simp_all only [PartialListLike.Mem, PartialListLike.head, PartialListLike.tail,
+      PartialListLike.isNil, Membership.mem, Subtype.iterate_map_coe]
   finite x := by
     have finite := x.property
     unfold PartialListLike.isFinite at *

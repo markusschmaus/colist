@@ -72,7 +72,7 @@ theorem iterate_tail_Mapped {α α' : Type u} {β : Type v} {x : Mapped α α' �
 abbrev map {α α' : Type u} {β : Type v} [inst : ListLike α β] (f : α → α') (b : β) : Mapped α α' β :=
   Subtype.mk {base := b, inst := inst.toProductiveListLike, f := f} <| by
     have := inst.finite b
-    simp_all only [ProductiveListLike.isFinite_Mapped]
+    simp_all only [ProductiveListLike.Mapped.isFinite_Mapped]
 
 @[simp]
 theorem base_map {α α' : Type u} {β : Type v} [inst : ListLike α β] {f : α → α'} {b : β} :
@@ -100,19 +100,19 @@ theorem map_mk {α α': Type u} (f : α → α') {imp : Type u} [inst : ListLike
     (f <$> mk x : AnyListLike α') = mk (ListLike.map f x) := by
   apply Subtype.eq
   simp only [Functor.map, Subtype.map_coe, AnyProductiveListLike.mk, AnyProductiveListLike.map_mk',
-    ClassSetoid.eq, Setoid.r, PartialListLike.equiv, ProductiveListLike.iterate_tail_Mapped,
+    ClassSetoid.eq, Setoid.r, PartialListLike.equiv, ProductiveListLike.Mapped.iterate_tail_Mapped,
     ProductiveListLike.base_map, ProductiveListLike.f_map]
   intro n
   constructor
-  · simp only [ProductiveListLike.isNil_Mapped, ListLike.isNil_Mapped, ListLike.iterate_tail_Mapped,
-    ProductiveListLike.iterate_tail_Mapped]
+  · simp only [ProductiveListLike.Mapped.isNil_Mapped, ListLike.isNil_Mapped, ListLike.iterate_tail_Mapped,
+    ProductiveListLike.Mapped.iterate_tail_Mapped]
   · refine (heq_of_cast_funext ?_).mp ?_
-    · simp only [ProductiveListLike.isNil_Mapped, ListLike.isNil_Mapped, ListLike.iterate_tail_Mapped,
-      ProductiveListLike.iterate_tail_Mapped]
+    · simp only [ProductiveListLike.Mapped.isNil_Mapped, ListLike.isNil_Mapped, ListLike.iterate_tail_Mapped,
+      ProductiveListLike.Mapped.iterate_tail_Mapped]
     · intro h
       congr
       simp only [ProductiveListLike.map, ListLike.iterate_tail_Mapped,
-        ProductiveListLike.iterate_tail_Mapped]
+        ProductiveListLike.Mapped.iterate_tail_Mapped]
 
 @[simp]
 theorem map_val {α α': Type u} (f : α → α') (x : AnyListLike α) :

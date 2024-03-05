@@ -7,11 +7,17 @@ class ListLike (α : outParam (Type u)) (β : Type v) extends ProductiveListLike
   finite (as : β) : PartialListLike.isFinite as
 namespace ListLike
 
-abbrev FiniteProductiveListLike (α : Type u) (β : Type v) [inst : PartialListLike α β] :=
-  Subtype fun as : β => PartialListLike.isFinite (inst := inst) as
+abbrev FiniteProductiveListLike (α : Type u) (β : Type v) [inst : ProductiveListLike α β] :=
+  Subtype fun as : β => PartialListLike.isFinite (inst := inst.toPartialListLike) as
 
-instance instSubtypeProductiveListLike (α : Type u) (β : Type v) [inst : ProductiveListLike α β] :
-    ProductiveListLike α (FiniteProductiveListLike α β) where
+namespace FiniteProductiveListLike
+
+instance Membership (α : Type u) (β : Type v) [inst : ProductiveListLike α β] :
+    Membership α (FiniteProductiveListLike α β) where
+  mem a as := inst.instMembership.mem a as.val
+
+instance instPartialListLike (α : Type u) (β : Type v) [inst : ProductiveListLike α β] :
+    PartialListLike α (FiniteProductiveListLike α β) where
   isNil as := inst.isNil as.val
   head as := inst.head as.val
   tail as := Subtype.mk (inst.tail as.val) <| by
@@ -25,25 +31,51 @@ instance instSubtypeProductiveListLike (α : Type u) (β : Type v) [inst : Produ
         Function.iterate_succ, Function.comp_apply]
     · have := Nat.succ_pred n_zero
       simp_all only
+
+@[simp]
+theorem isNil_val {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    (as : FiniteProductiveListLike α β) :
+    (PartialListLike.isNil as) = (PartialListLike.isNil as.val) := rfl
+
+@[simp]
+theorem head_val {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    (as : FiniteProductiveListLike α β) :
+    (PartialListLike.head as) = (PartialListLike.head as.val) := rfl
+
+@[simp]
+theorem tail_val {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    (as : FiniteProductiveListLike α β) :
+    (PartialListLike.tail as).val = (PartialListLike.tail as.val) := rfl
+
+@[simp]
+theorem iterate_tail_val {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    (as : FiniteProductiveListLike α β) (n : Nat):
+    (PartialListLike.tail^[n] as).val = (PartialListLike.tail^[n] as.val) := by
+  revert as
+  induction n with
+  | zero =>
+    intro as
+    simp_all only [Nat.zero_eq, Function.iterate_zero, id_eq]
+  | succ n ih =>
+    intro as
+    have := ih (PartialListLike.tail as)
+    simp_all only [Subtype.forall, forall_exists_index, tail_val, Function.iterate_succ,
+      Function.comp_apply]
+
+instance instProductiveListLike (α : Type u) (β : Type v) [inst : ProductiveListLike α β] :
+    ProductiveListLike α (FiniteProductiveListLike α β) where
+  toPartialListLike := instPartialListLike α β
   terminal_isNil as := inst.terminal_isNil as.val
+  consistent_mem a as := by
+    have := inst.consistent_mem a as.val
+    simp_all only [PartialListLike.Mem, head_val, iterate_tail_val, isNil_val, Membership.mem]
 
 instance instSubtypeListLike (α : Type u) (β : Type v) [inst : ProductiveListLike α β] :
     ListLike α (FiniteProductiveListLike α β) where
-  toProductiveListLike := instSubtypeProductiveListLike α β
+  toProductiveListLike := instProductiveListLike α β
   finite as := by
-    unfold PartialListLike.isFinite at *
-    obtain ⟨n, val_nil⟩ := as.property
-    use n
-    revert as val_nil
-    induction n with
-    | zero =>
-      intro as val_nil
-      exact val_nil
-    | succ n ih =>
-      intro as val_nil
-      have := ih (PartialListLike.tail as) val_nil
-      simp_all only [Subtype.forall, forall_exists_index, Function.iterate_succ,
-        Function.comp_apply]
+    have := as.property
+    simp_all only [PartialListLike.isFinite, isNil_val, iterate_tail_val]
 
 -- structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (ListLike α))
 --     (x₂ : ClassSetoid.Imp (ListLike α)) : Prop where

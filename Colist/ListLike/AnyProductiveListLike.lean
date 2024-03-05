@@ -64,12 +64,55 @@ theorem terminal_isNil {α : Type u} (as : AnyProductiveListLike α) :
   rw [← rep]
   exact x.inst.terminal_isNil x.value
 
-instance instProductiveListLike {α : Type u} :
-    ProductiveListLike α (AnyProductiveListLike α) where
+abbrev contains {α : Type u} : AnyProductiveListLike α → α → Prop :=
+    ClassSetoid.lift (ProductiveListLike.setoid α) (·.contains) <| by
+  constructor
+  · simp only [implies_true]
+  · simp_all only [heq_eq_eq]
+    intro _ _ inst₁ inst₂ x₁ x₂ equiv
+    funext
+    simp only [PartialListLike.contains, ← inst₁.consistent_mem, PartialListLike.Mem, ←
+      inst₂.consistent_mem, eq_iff_iff]
+    constructor
+    · intro ⟨n, is_nil, x_eq⟩
+      have is_nil' := equiv n |>.isNil_eq.not.mp is_nil
+      use n
+      use is_nil'
+      simp_all only
+      refine' congr_heq (equiv n |>.head_heq) _
+      apply heq_prop
+    · intro ⟨n, is_nil, x_eq⟩
+      have is_nil' := equiv n |>.isNil_eq.not.mpr is_nil
+      use n
+      use is_nil'
+      simp_all only
+      refine' congr_heq (equiv n |>.head_heq).symm _
+      apply heq_prop
+
+instance instMembership {α : Type u} : Membership α (AnyProductiveListLike α) where
+  mem a as := contains as a
+
+instance instPartialListLike {α : Type u} :
+    PartialListLike α (AnyProductiveListLike α) where
   isNil := isNil
   head := head
   tail := tail
-  terminal_isNil := terminal_isNil
+
+instance instProductiveListLike {α : Type u} :
+    ProductiveListLike α (AnyProductiveListLike α) where
+  toPartialListLike := instPartialListLike
+  consistent_mem a as := by
+    obtain ⟨imp, inst, x, rep⟩ := ClassSetoid.exists_rep as
+    rw [← rep]; clear rep
+    have := inst.consistent_mem a x
+    simp_all only [PartialListLike.Mem, PartialListLike.contains, PartialListLike.head,
+      PartialListLike.tail, ClassSetoid.iterate_liftEndo_mk, PartialListLike.isNil,
+      ClassSetoid.lift_mk, not_false_eq_true, ClassSetoid.lift_prop_mk, Membership.mem,
+      implies_true]
+  terminal_isNil as := by
+    obtain ⟨x, rep⟩ := Quotient.exists_rep as
+    rw [← rep]
+    exact x.inst.terminal_isNil x.value
 
 @[simp]
 theorem isFinite_mk {α : Type u} {β : Type v} [ProductiveListLike α β] {x : β} :

@@ -35,7 +35,7 @@ theorem eq {Class : Type u → Type v} {s : ClassSetoid Class} {imp : Type u} [i
   · intro h
     exact Quotient.eq'.mpr h
 
-theorem exists_rep {Class : Type u → Type v} (s : ClassSetoid Class) (x : Quotient s) : ∃ (β : Type u)
+theorem exists_rep {Class : Type u → Type v} {s : ClassSetoid Class} (x : Quotient s) : ∃ (β : Type u)
     (inst : Class β) (x' : β), s.mkQuotient (inst := inst) x' = x := by
   obtain ⟨x', rep⟩ := Quotient.exists_rep x
   use x'.imp
@@ -78,7 +78,7 @@ theorem lift_mk_heq {Class : Type u → Type v} {s : ClassSetoid Class}
   refine cast_heq (lift.proof_3 s (fun {imp} => f) h (s.mkQuotient (inst := inst) x)) ?x
 
 @[simp]
-theorem lift_prop_mk {Class : Type u → Type v} (s : ClassSetoid Class)
+theorem lift_prop_mk {Class : Type u → Type v} {s : ClassSetoid Class}
     {β : Type w}
     {pᵢ : {imp : Type u} → Class imp → imp → Prop}
     {f : {imp : Type u} → (inst : Class imp) → (x : imp) → pᵢ inst x → β}
@@ -92,12 +92,23 @@ theorem lift_prop_mk {Class : Type u → Type v} (s : ClassSetoid Class)
   · exact heq_prop hₒ hᵢ
 
 @[simp]
-theorem lift_mk {Class : Type u → Type v} (s : ClassSetoid Class)
+theorem lift_mk {Class : Type u → Type v} {s : ClassSetoid Class}
     {β : Type w}
-    (f : {imp : Type u} → (inst : Class imp) → (x : imp) → β)
-    (h : lift.Precondition s f (fun _ => β))
-    {imp : Type u} {inst : Class imp} (x : imp) :
+    {f : {imp : Type u} → (inst : Class imp) → (x : imp) → β}
+    {h : lift.Precondition s f (fun _ => β)}
+    {imp : Type u} {inst : Class imp} {x : imp} :
     s.lift f h (s.mkQuotient (inst := inst) x) = f inst x :=
+  rfl
+@[simp]
+
+theorem lift_mk' {Class : Type u → Type v} {s : ClassSetoid Class}
+    {β : Type w}
+    {f : {imp : Type u} → (inst : Class imp) → (x : imp) → β}
+    {h : lift.Precondition s f (fun _ => β)}
+    {imp : Type u} {inst : Class imp} {x : imp}
+    (g : Quotient s → β) {g_lift : g = s.lift f h} :
+    g (s.mkQuotient (inst := inst) x) = f inst x := by
+  subst g_lift
   rfl
 
 @[simp]
