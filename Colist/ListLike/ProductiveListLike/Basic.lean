@@ -1,9 +1,11 @@
 import Colist.ListLike.PartialListLike.Basic
 
 
-class ProductiveListLike (α : outParam (Type u)) (β : Type v) extends PartialListLike α β : Type (max u v) where
+class ProductiveListLike (α : outParam (Type u)) (β : Type v)
+    extends PartialListLike α β : Type (max u v) where
   terminal_isNil (as : β) : isNil as → isNil (tail as)
-  consistent_mem (a : α) (as : β): PartialListLike.Mem a as ↔ toPartialListLike.instMembership.mem a as
+  consistent_mem (a : α) (as : β) :
+    PartialListLike.Mem a as ↔ toPartialListLike.instMembership.mem a as
 
 namespace ProductiveListLike
 
@@ -21,7 +23,8 @@ theorem iterate_terminal_isNil {α : Type u} {β : Type v} [inst : ProductiveLis
     simp_all only [implies_true, Function.iterate_succ, Function.comp_apply]
 
 @[simp]
-theorem isFinite_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α β] {as : β} :
+theorem isFinite_tail {α : Type u} {β : Type v}
+    [inst : ProductiveListLike α β] {as : β} :
     PartialListLike.isFinite (inst.tail as) ↔ PartialListLike.isFinite as := by
   simp only [PartialListLike.isFinite]
   constructor
@@ -37,7 +40,8 @@ theorem isFinite_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α 
       simp_all only [Function.iterate_succ, Function.comp_apply]
 
 @[simp]
-theorem isFinite_iterate_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α β] {as : β} {n : ℕ} :
+theorem isFinite_iterate_tail {α : Type u} {β : Type v}
+    [inst : ProductiveListLike α β] {as : β} {n : ℕ} :
     PartialListLike.isFinite (inst.tail^[n] as) ↔ PartialListLike.isFinite as := by
   revert as
   induction n with
@@ -49,12 +53,14 @@ theorem isFinite_iterate_tail {α : Type u} {β : Type v} [inst : ProductiveList
     simp_all only [Function.iterate_succ, Function.comp_apply, isFinite_tail]
 
 @[simp]
-theorem isNil_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α β] {as : β} :
+theorem isNil_tail {α : Type u} {β : Type v}
+    [inst : ProductiveListLike α β] {as : β} :
     PartialListLike.isNil as → PartialListLike.isNil (PartialListLike.tail as) :=
   fun a => terminal_isNil as a
 
 @[simp]
-theorem isNil_iterate_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α β] {as : β} {n : ℕ} :
+theorem isNil_iterate_tail {α : Type u} {β : Type v}
+    [inst : ProductiveListLike α β] {as : β} {n : ℕ} :
     PartialListLike.isNil as → PartialListLike.isNil (PartialListLike.tail^[n] as) := by
   revert as
   induction n with
@@ -64,6 +70,20 @@ theorem isNil_iterate_tail {α : Type u} {β : Type v} [inst : ProductiveListLik
   | succ n ih =>
     intro as
     simp_all only [Function.iterate_succ, Function.comp_apply, isNil_tail, implies_true]
+
+@[simp]
+theorem isNil_iterate_tail_of_isNil_iterate_tail {α : Type u} {β : Type v}
+    [inst : ProductiveListLike α β] {as : β} {n m: ℕ} :
+    (n ≤ m) →
+    PartialListLike.isNil (PartialListLike.tail^[n] as) →
+    PartialListLike.isNil (PartialListLike.tail^[m] as) := by
+  intro n_le_m
+  have ⟨k, k_def⟩ := Nat.exists_eq_add_of_le n_le_m
+  rw [add_comm] at k_def
+  subst k_def
+  have := isNil_iterate_tail (as := PartialListLike.tail^[n] as) (n := k)
+  simp only [←Function.iterate_add_apply] at this
+  simp_all only [le_add_iff_nonneg_left, zero_le, implies_true]
 
 instance setoid (α : Type u) : ClassSetoid (ProductiveListLike α) where
   r x₁ x₂ := PartialListLike.setoid α |>.r

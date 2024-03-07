@@ -9,15 +9,37 @@ class PartialListLike (α : outParam (Type u)) (β : Type v) : Type (max u v) wh
   tail : β → β
   [instMembership : Membership α β]
 
-instance {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β}: Decidable (inst.isNil as) := inst.instDecidableIsNil as
+instance {α : Type u} {β : Type v} [inst : PartialListLike α β] {as : β} :
+    Decidable (inst.isNil as) := inst.instDecidableIsNil as
 
 namespace PartialListLike
+
+def isNil_exp (α : Type u) (β : Type v) (inst : PartialListLike α β) (as : β) :=
+  isNil (α := α) (β := β) (self := inst) as
+
+theorem isNil_exp_of_isNil {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} :
+    isNil (self := inst) as = isNil_exp α β inst as := rfl
+
+def head_exp (α : Type u) (β : Type v) (inst : PartialListLike α β) (as : β) (not_nil : ¬ isNil as) :=
+  PartialListLike.head (α := α) (β := β) (self := inst) as not_nil
+
+theorem head_exp_of_head {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} {not_nil : ¬ isNil as} :
+    head (self := inst) as not_nil = head_exp α β inst as not_nil := rfl
+
+def tail_exp (α : Type u) (β : Type v) (inst : PartialListLike α β) (as : β) :=
+  tail (α := α) (β := β) (self := inst) as
+
+theorem tail_exp_of_tail {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} :
+    tail (self := inst) as = tail_exp α β inst as := rfl
 
 abbrev isFinite {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β) :
     Prop := ∃ (n : ℕ), inst.isNil (inst.tail^[n] as)
 
 abbrev Mem {α : Type u} {β : Type v} [inst : PartialListLike α β] (a : α) (as : β) :
-    Prop := ∃ (n : Nat) (is_nil : _), a = PartialListLike.head (PartialListLike.tail^[n] as) is_nil
+    Prop := ∃ (n : Nat) (not_nil : _), a = PartialListLike.head (PartialListLike.tail^[n] as) not_nil
 
 def contains {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β) (a : α) :
     Prop := inst.instMembership.mem a as
