@@ -52,16 +52,27 @@ abbrev head? {α : Type u} {β : Type v} [inst : PartialListLike α β] (as : β
   if h : inst.isNil as then none else some (inst.head as h)
 
 @[simp]
-theorem head?_not_nil {α : Type u} {β : Type v} [inst : PartialListLike α β]
-    {as : β} (not_nil : ¬ PartialListLike.isNil as) :
+theorem head?_some_of_not_nil {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} (not_nil : ¬ inst.isNil as) :
     head? as = some (PartialListLike.head as not_nil) := by
   simp_all only [head?, dite_false]
 
 @[simp]
-theorem head?_nil {α : Type u} {β : Type v} [inst : PartialListLike α β]
-    {as : β} (nil : PartialListLike.isNil as) :
-    head? as = none := by
-  simp_all only [head?, dite_true]
+theorem head?_none_iff_nil {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    {as : β} : head? as = none ↔ (PartialListLike.isNil as) := by
+  constructor
+  · simp only [dite_eq_left_iff, imp_false, not_not, imp_self]
+  · simp_all only [head?, dite_true, implies_true]
+
+theorem head_eq_of_head?_eq {α : Type u} {β : Type v} {inst : PartialListLike α β}
+    {inst' : PartialListLike α β} {as as' : β} {not_nil : _} {not_nil' : _} :
+    as = as' → inst.head? as = inst'.head? as →
+    inst.head as not_nil = inst'.head as' not_nil' := by
+  intro as_eq
+  subst as_eq
+  rw [head?_some_of_not_nil (inst := inst) not_nil]
+  rw [head?_some_of_not_nil (inst := inst') not_nil']
+  simp only [Option.some.injEq, imp_self]
 
 theorem head_eq_of_some_head?_eq {α : Type u} {β : Type v} [inst : PartialListLike α β]
     {as : β} {head : α} : inst.head? as = some head →
@@ -71,17 +82,17 @@ theorem head_eq_of_some_head?_eq {α : Type u} {β : Type v} [inst : PartialList
     revert head?_eq
     apply imp_not_comm.mp
     intro is_nil
-    rw [head?_nil]
+    rw [head?_none_iff_nil.mpr]
     · simp_all only [not_false_eq_true]
     · simp_all only
   use not_nil
-  simp_all only [not_false_eq_true, head?_not_nil, Option.some.injEq]
+  simp_all only [not_false_eq_true, head?_some_of_not_nil, Option.some.injEq]
 
 theorem some_head?_eq_of_head_eq {α : Type u} {β : Type v} [inst : PartialListLike α β]
     {as : β} {head : α} {not_nil : ¬ inst.isNil as} : inst.head as not_nil = head →
     inst.head? as = some head := by
   intro head_eq
-  simp_all only [not_false_eq_true, head?_not_nil]
+  simp_all only [not_false_eq_true, head?_some_of_not_nil]
 
 structure equivExt {α : Type u} (x₁ : ClassSetoid.Imp (PartialListLike α))
     (x₂ : ClassSetoid.Imp (PartialListLike α)) : Prop where

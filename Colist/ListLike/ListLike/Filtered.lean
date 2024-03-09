@@ -10,46 +10,47 @@ namespace ListLike
 
 namespace Filtered
 
-def valid {α : Type u} {β : Type v} [inst : PartialListLike α β] (p : α → Prop)
+def validBaseTail {α : Type u} {β : Type v} [inst : PartialListLike α β] (p : α → Prop)
     (baseTail : β) : Prop :=
   (not_nil : ¬ PartialListLike.isNil baseTail) → p (PartialListLike.head baseTail not_nil)
 
 instance {α : Type u} {β : Type v} [inst : ListLike α β] (p : α → Prop)
-    [decP : DecidablePred p]  (baseTail : β) : Decidable (valid p baseTail) :=
+    [decP : DecidablePred p]  (baseTail : β) : Decidable (validBaseTail p baseTail) :=
   if nil? : PartialListLike.isNil baseTail then
     isTrue <| by
-      simp_all only [valid, not_true_eq_false, IsEmpty.forall_iff]
+      simp_all only [validBaseTail, not_true_eq_false, IsEmpty.forall_iff]
   else if valid? : p (PartialListLike.head baseTail nil?) then
     isTrue <| by
-      simp_all only [valid, not_false_eq_true, forall_true_left]
+      simp_all only [validBaseTail, not_false_eq_true, forall_true_left]
   else
     isFalse <| by
-      simp_all only [valid, not_false_eq_true, forall_true_left]
+      simp_all only [validBaseTail, not_false_eq_true, forall_true_left]
 
 namespace baseTail
 
-structure PropertyN {α : Type u} {β : Type v} (inst : ListLike α β) {p : α → Prop}
-    (decP : DecidablePred p) (base : β) (baseTail : β) (n : Nat) : Prop where
-  hit : valid p (inst.tail^[n] base)
-  misses {i : Nat} : i < n → ¬ valid p (inst.tail^[i] base)
-  eq_baseTail : baseTail = inst.tail^[n] base
+structure PropertyK {α : Type u} {β : Type v} (inst : ListLike α β) {p : α → Prop}
+    (decP : DecidablePred p) (base : β) (baseTail : β) (k : Nat) : Prop where
+  hit : validBaseTail p (inst.tail^[k] base)
+  misses {i : Nat} : i < k → ¬ validBaseTail p (inst.tail^[i] base)
+  eq_baseTail : baseTail = inst.tail^[k] base
 
-def Property {α : Type u} {β : Type v} [inst : ListLike α β] (p : α → Prop)
-    [decP : DecidablePred p] (base : β) (baseTail : β) :=
-  ∃ (n : Nat), PropertyN inst decP base baseTail n
+structure Result {α : Type u} {β : Type v} (inst : ListLike α β) (p : α → Prop)
+    (decP : DecidablePred p) (base : β) where
+  baseTail : β
+  baseTailIter : Nat
+  property : PropertyK inst decP base baseTail baseTailIter
 
 end baseTail
 
 def getBaseTail  {α : Type u} {β : Type v} (inst : ListLike α β) {p : α → Prop}
-    (decP : DecidablePred p) (base : β) : Subtype (baseTail.Property p base) :=
+    (decP : DecidablePred p) (base : β) : baseTail.Result inst p decP base :=
 
   let rec go (candidate : β) (n : Nat)
       (iterate_tail : candidate = PartialListLike.tail^[n] base)
-      (misses : ∀ (i : Nat), i < n → ¬ valid p (PartialListLike.tail^[i] base)) :
-      Subtype (baseTail.Property p base) :=
-    if valid? : valid p candidate then
-      Subtype.mk candidate <| by
-        use n
+      (misses : ∀ (i : Nat), i < n → ¬ validBaseTail p (PartialListLike.tail^[i] base)) :
+      baseTail.Result inst p decP base :=
+    if valid? : validBaseTail p candidate then
+      baseTail.Result.mk candidate n <| by
         constructor
         · simp_all only
         · simp_all only [not_false_eq_true, implies_true, forall_const]
@@ -73,7 +74,7 @@ def getBaseTail  {α : Type u} {β : Type v} (inst : ListLike α β) {p : α →
         intro m
         by_cases m_zero : m = 0
         · subst m_zero
-          simp only [valid, not_forall] at valid?
+          simp only [validBaseTail, not_forall] at valid?
           have ⟨not_nil, _⟩ := valid?
           simp_all only [Function.iterate_succ_apply', not_lt_zero',
             IsEmpty.forall_iff, forall_const, Function.iterate_zero, id_eq,
@@ -93,8 +94,8 @@ def getBaseTail  {α : Type u} {β : Type v} (inst : ListLike α β) {p : α →
 
 abbrev mkBaseTail {α : Type u} {β : Type v} [inst : ListLike α β]
     {p : α → Prop} [decP : DecidablePred p] (base : β) :
-    Thunk (Subtype (Filtered.baseTail.Property p base)) :=
-  Thunk.mk (fun () => Filtered.getBaseTail inst decP base)
+    Thunk (baseTail.Result inst p decP base) :=
+  Thunk.mk (fun () => getBaseTail inst decP base)
 
 end Filtered
 
@@ -103,10 +104,17 @@ structure Filtered (α : Type u) (β : Type v) where
   p : α → Prop
   [decP : DecidablePred p]
   base : β
-  baseTail : Thunk (Subtype (Filtered.baseTail.Property p base)) :=
+  cache : Thunk (Filtered.baseTail.Result inst p decP base) :=
     Filtered.mkBaseTail base
 
 namespace Filtered
+
+def baseTailIter {α : Type u} {β : Type v} (as : Filtered α β) : Nat :=
+  as.cache.get.baseTailIter
+
+def baseTail {α : Type u} {β : Type v} (as : Filtered α β) : β :=
+  as.cache.get.baseTail
+
 
 instance instMembership {α : Type u} {β : Type v} :
     Membership α (Filtered α β) where
@@ -114,49 +122,81 @@ instance instMembership {α : Type u} {β : Type v} :
 
 instance instPartialListLike {α : Type u} {β : Type v} :
     PartialListLike α (Filtered α β) where
-  isNil as := as.inst.isNil as.baseTail.get
-  head as := as.inst.head as.baseTail.get
+  isNil as := as.inst.isNil as.baseTail
+  head as := as.inst.head as.baseTail
   tail as :=
-    let newBase := as.inst.tail (Thunk.get as.baseTail).val
+    let newBase := as.inst.tail as.baseTail
     {inst := as.inst, p := as.p, decP := as.decP, base := newBase}
 
-@[simp]
-theorem tail_p {α : Type u} {β : Type v} {as : Filtered α β} :
-    (PartialListLike.tail as).p = as.p := by
-  simp [PartialListLike.tail]
+theorem hit {α : Type u} {β : Type v} (as : Filtered α β) :
+    validBaseTail (inst := as.inst.toPartialListLike)
+    as.p (as.inst.tail^[as.baseTailIter] as.base) := by
+  simp only [baseTailIter]
+  induction as.cache.get with
+  | mk baseTail baseTailIter prop =>
+  have := prop.hit
+  unfold validBaseTail at *
+  simp_all only [implies_true]
+
+theorem misses {α : Type u} {β : Type v} (as : Filtered α β) {i : Nat} :
+    i < as.baseTailIter → ¬ validBaseTail (inst := as.inst.toPartialListLike)
+    as.p (as.inst.tail^[i] as.base) := by
+  simp only [baseTailIter]
+  induction as.cache.get with
+  | mk baseTail baseTailIter prop =>
+  simp only
+  intro lt
+  have := prop.misses lt
+  unfold validBaseTail at *
+  simp_all only [not_forall]
 
 @[simp]
-theorem iterate_tail_p {α : Type u} {β : Type v} {as : Filtered α β} {n : Nat} :
+theorem eq_baseTail {α : Type u} {β : Type v} (as : Filtered α β) :
+    as.baseTail = as.inst.tail^[as.baseTailIter] as.base := by
+  simp only [baseTailIter, baseTail]
+  induction as.cache.get with
+  | mk baseTail baseTailIter prop =>
+  have := prop.eq_baseTail
+  simp_all only
+
+@[simp]
+theorem tail_base {α : Type u} {β : Type v} (as : Filtered α β) :
+    (PartialListLike.tail as).base = as.inst.tail^[as.baseTailIter.succ] as.base := by
+  simp only [baseTail, baseTailIter, PartialListLike.tail]
+  induction as.cache.get with
+  | mk baseTail baseTailIter prop =>
+  simp_all only [prop.eq_baseTail, Function.iterate_succ', Function.comp_apply]
+
+@[simp]
+theorem tail_p {α : Type u} {β : Type v} (as : Filtered α β) :
+    (PartialListLike.tail as).p = as.p := rfl
+
+@[simp]
+theorem iterate_tail_p {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
     (PartialListLike.tail^[n] as).p = as.p := by
-  induction n generalizing as with
-  | zero =>
-    simp only [Nat.zero_eq, Function.iterate_zero, id_eq]
+  induction n with
+  | zero => rfl
   | succ n ih =>
-    have := ih (as := PartialListLike.tail as)
-    simp_all only [tail_p, Function.iterate_succ, Function.comp_apply]
+    simp_all only [Function.iterate_succ', Function.comp_apply, tail_p]
 
 @[simp]
-theorem tail_inst {α : Type u} {β : Type v} {as : Filtered α β} :
-    (PartialListLike.tail as).inst = as.inst := by
-  simp [PartialListLike.tail]
+theorem tail_inst {α : Type u} {β : Type v} (as : Filtered α β) :
+    (PartialListLike.tail as).inst = as.inst := rfl
 
 @[simp]
-theorem iterate_tail_inst {α : Type u} {β : Type v} {as : Filtered α β} {n : Nat} :
+theorem iterate_tail_inst {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
     (PartialListLike.tail^[n] as).inst = as.inst := by
-  induction n generalizing as with
-  | zero =>
-    simp only [Nat.zero_eq, Function.iterate_zero, id_eq]
+  induction n with
+  | zero => rfl
   | succ n ih =>
-    have := ih (as := PartialListLike.tail as)
-    simp_all only [tail_inst, Function.iterate_succ, Function.comp_apply]
+    simp_all only [Function.iterate_succ', Function.comp_apply, tail_inst]
 
 @[simp]
-theorem tail_decP {α : Type u} {β : Type v} {as : Filtered α β} :
-    (PartialListLike.tail as).decP = as.decP := by
-  simp [PartialListLike.tail]
+theorem tail_decP {α : Type u} {β : Type v} (as : Filtered α β) :
+    (PartialListLike.tail as).decP = as.decP := rfl
 
 @[simp]
-theorem iterate_tail_decP_heq {α : Type u} {β : Type v} {as : Filtered α β} {n : Nat} :
+theorem iterate_tail_decP_heq {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
     HEq (PartialListLike.tail^[n] as).decP as.decP := by
   induction n generalizing as with
   | zero =>
@@ -165,541 +205,243 @@ theorem iterate_tail_decP_heq {α : Type u} {β : Type v} {as : Filtered α β} 
     have := ih (as := PartialListLike.tail as)
     simp_all only [tail_decP, Function.iterate_succ, Function.comp_apply]
 
-theorem is_valid {α : Type u} {β : Type v} (as : Filtered α β) :
-    valid as.p as := by
-  have ⟨n, prop⟩ := as.baseTail.get.property
-  simp only [valid, PartialListLike.head]
+@[simp]
+theorem tail_baseTail {α : Type u} {β : Type v} (as : Filtered α β) :
+    as.inst.tail (as.baseTail) = (PartialListLike.tail as).base := rfl
 
-  conv =>
-    intro not_nil
-    arg 2
-    arg 1
-    rw [prop.eq_baseTail]
+noncomputable def baseIterTailIterate.model {α : Type u} {β : Type v}
+    (as : Filtered α β) : Nat → Nat
+  | Nat.zero => 0
+  | Nat.succ n =>
+    (baseIterTailIterate.model as n) +
+      (PartialListLike.tail^[n] as).baseTailIter.succ
 
-  have := prop.hit
-  simp_all only [valid, implies_true]
+@[simp]
+theorem baseIterTailIterate.model_succ {α : Type u} {β : Type v}
+    (as : Filtered α β) (n : Nat) :
+    baseIterTailIterate.model as n.succ = baseIterTailIterate.model as n +
+    (PartialListLike.tail^[n] as).baseTailIter.succ := by
+  rfl
 
-structure Property {α : Type u} {β : Type v} (as : Filtered α β) (m : Nat) : Prop where
-  hit : valid (inst := as.inst.toPartialListLike) as.p (as.inst.tail^[m] as.base)
-  misses : ∀ {i : Nat}, i < m → ¬ valid as.p (inst := as.inst.toPartialListLike)
-      (as.inst.tail^[i] as.base)
-  not_nil_base : ¬ PartialListLike.isNil as ↔ ¬ as.inst.isNil (as.inst.tail^[m] as.base)
-  isNil_base : PartialListLike.isNil as ↔ as.inst.isNil (as.inst.tail^[m] as.base)
-  head_base not_nil :
-    PartialListLike.head as not_nil = as.inst.head (as.inst.tail^[m] as.base)
-    (not_nil_base.mp not_nil)
-  tail_base : (PartialListLike.tail as).base = as.inst.tail^[m.succ] as.base
+structure baseIterTailIterate.Property {α : Type u} {β : Type v}
+    (as : Filtered α β) (n : Nat) (out : Nat) :
+    Prop where
+  eq : (PartialListLike.tail^[n] as).base = as.inst.tail^[out] as.base
+  model : out = baseIterTailIterate.model as n
+  n_le : n ≤ out
 
-theorem property {α : Type u} {β : Type v} (as : Filtered α β) :
-    ∃ m : Nat, Property as m := by
-  have ⟨m, prop⟩ := as.baseTail.get.property
-  use m
-  constructor
-  case not_nil_base =>
-    simp only [PartialListLike.isNil]
-    rw [prop.eq_baseTail]
-  . exact prop.hit
-  · exact prop.misses
-  · simp only [PartialListLike.isNil]
-    rw [prop.eq_baseTail]
-  · intro not_nil
-    simp [PartialListLike.head]
-    conv =>
-      lhs
-      arg 1
-      rw [prop.eq_baseTail]
-  · simp only [PartialListLike.tail]
-    rw [prop.eq_baseTail]
-    simp only [Function.iterate_succ', Function.comp_apply]
+def baseIterTailIterate {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
+    Subtype (baseIterTailIterate.Property as n) :=
+  let rec go (acc : Nat) (current : Filtered α β) (m : Nat)
+      (eq_current : current = PartialListLike.tail^[m] as)
+      (acc_valid : baseIterTailIterate.Property as m acc)
+      (le : m ≤ n) :
+      Subtype (baseIterTailIterate.Property as n) :=
+    if m_zero : m = n then
+      Subtype.mk acc <| by
+        simp_all only
+    else
+      have : current.inst = as.inst := by
+        simp_all only [iterate_tail_inst]
+      have acc_valid' := by
+        constructor
+        . have := acc_valid.eq
+          simp_all only [iterate_tail_inst, Function.iterate_succ', Function.comp_apply, tail_base,
+            Function.iterate_add_apply]
+        . have := acc_valid.model
+          simp_all only [iterate_tail_inst]
+          unfold baseIterTailIterate.model
+          induction m with
+          | zero =>
+            simp only [Nat.zero_eq, Function.iterate_zero, id_eq, add_zero, self_eq_add_left]
+            rfl
+          | succ m _ =>
+            simp only [Function.iterate_succ, Function.comp_apply, baseIterTailIterate.model_succ]
+            ring
+        · have := acc_valid.n_le
+          omega
+      have eq_current' := by
+        simp_all only [Function.iterate_succ', Function.comp_apply]
+      have le' := by
+        omega
+      -- Show termination:
+      have : n - m.succ < n - m := by
+        omega
+      go (current.baseTailIter.succ + acc) (PartialListLike.tail current) m.succ
+        eq_current' acc_valid' le'
+  termination_by n - m
 
-structure PropertyTail {α : Type u} {β : Type v} (as : Filtered α β) (m : Nat) : Prop where
-  hit : valid (inst := as.inst.toPartialListLike) as.p (as.inst.tail^[m] as.base)
-  not_nil_base : ¬ PartialListLike.isNil (PartialListLike.tail as) →
-    ¬ as.inst.isNil (as.inst.tail^[m] as.base)
-  isNil_base : PartialListLike.isNil (PartialListLike.tail as) ↔
-    as.inst.isNil (as.inst.tail^[m] as.base)
-  head_base not_nil : PartialListLike.head (PartialListLike.tail as) not_nil =
-    as.inst.head (as.inst.tail^[m] as.base) (not_nil_base not_nil)
-  tail_base : (PartialListLike.tail (PartialListLike.tail as)).base =
-    as.inst.tail^[m.succ] as.base
-  le : 1 ≤ m
-
-theorem property_tail {α : Type u} {β : Type v} (as : Filtered α β) :
-    ∃ m : Nat, PropertyTail as m := by
-  have ⟨m, prop⟩ := (PartialListLike.tail as).property
-  have ⟨m', prop'⟩ := as.property
-  have m_eq : m + Nat.succ m' = m + 1 + m':= by omega
-  use m + 1 + m'
-  constructor
-  case not_nil_base =>
-    intro not_nil
-    have := prop.not_nil_base.mp not_nil
-    revert this
-    rw [prop'.tail_base]
-    simp only [← Function.iterate_add_apply, m_eq, imp_self]
-  . have := prop.hit
-    simp_all only [prop'.tail_base, tail_inst, tail_p, Function.iterate_succ', Function.comp_apply,
-      Function.iterate_add_apply, Function.iterate_zero, id_eq]
-  · simp only [Function.iterate_succ', Function.iterate_zero, Function.comp_apply, id_eq,
-      prop.isNil_base, tail_inst, prop'.tail_base, Function.iterate_add_apply, eq_iff_iff]
-  · intro not_nil
-    simp_all only [Function.iterate_succ', Function.iterate_zero, Function.comp_apply, id_eq,
-      prop.head_base, tail_inst, prop'.tail_base, Function.iterate_add_apply]
-  · simp only [Function.iterate_succ', Function.iterate_zero, Function.comp_apply, id_eq,
-      prop.tail_base, tail_inst, prop'.tail_base, Function.iterate_add_apply]
-  . omega
-
-structure PropertyIterateTail {α : Type u} {β : Type v} (as : Filtered α β) (n m : Nat) : Prop where
-  hit : valid (inst := as.inst.toPartialListLike) as.p (as.inst.tail^[m] as.base)
-  not_nil_base : ¬ PartialListLike.isNil (PartialListLike.tail^[n] as) →
-    ¬ as.inst.isNil (as.inst.tail^[m] as.base)
-  isNil_base : PartialListLike.isNil (PartialListLike.tail^[n] as) ↔
-    as.inst.isNil (as.inst.tail^[m] as.base)
-  head_base not_nil : PartialListLike.head (PartialListLike.tail^[n] as) not_nil =
-    as.inst.head (as.inst.tail^[m] as.base) (not_nil_base not_nil)
-  tail_base : (PartialListLike.tail (PartialListLike.tail^[n] as)).base =
-    as.inst.tail^[m.succ] as.base
-  le : n ≤ m
-
-theorem property_iterate_tail {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
-    ∃ m : Nat, PropertyIterateTail as n m := by
-  induction n generalizing as with
-  | zero =>
-    have ⟨m, prop⟩ := as.property
-    use m
+  have acc_valid := by
     constructor
-    . exact prop.hit
-    · exact prop.isNil_base
-    · exact prop.head_base
-    · exact prop.tail_base
-    · linarith
-  | succ n ih =>
-    replace ⟨m, ih⟩ := ih (as := PartialListLike.tail as)
-    have ⟨m', prop'⟩ := as.property
-    use m + 1 + m'
-    constructor
-    case not_nil_base =>
-      simp only [Function.iterate_succ, Function.comp_apply, ih.isNil_base, tail_inst,
-        prop'.tail_base, Function.iterate_add_apply, Function.iterate_zero,
-        Function.apply_iterate_apply, id_eq, imp_self]
-    · have := ih.hit
-      simp_all only [tail_inst, tail_p, prop'.tail_base, Function.iterate_succ', Function.comp_apply,
-        Function.iterate_add_apply, Function.iterate_zero, id_eq]
-    · simp only [Function.iterate_succ, Function.comp_apply, ih.isNil_base, tail_inst,
-        prop'.tail_base, Function.iterate_add_apply, Function.iterate_zero,
-        Function.apply_iterate_apply, id_eq]
-    · intro not_nil
-      simp only [Function.iterate_succ_apply, ih.head_base not_nil, prop'.tail_base]
-      simp only [← Function.iterate_succ_apply, ← Function.iterate_succ_apply', ←
-        Function.iterate_add_apply]
-      have : m + Nat.succ m' = m + 1 + m':= by omega
-      simp only [this]
-    · simp only [Function.iterate_succ_apply, ih.tail_base, prop'.tail_base]
-      simp only [← Function.iterate_succ_apply, ← Function.iterate_succ_apply', ←
-        Function.iterate_add_apply]
-      congr
-      omega
-    · have := ih.le
-      omega
+    · rfl
+    · rfl
+    · omega
 
--- theorem isNil_tail {α : Type u} {β : Type v} (as : Filtered α β) :
---     ∃ k : Nat,
---     PartialListLike.isNil (PartialListLike.tail as) ↔
---     as.inst.isNil (as.inst.tail^[k] as.base)  := by
---   have ⟨k_tail, prop_tail⟩ := (PartialListLike.tail as).baseTail.get.property
---   have ⟨k', prop⟩ := as.baseTail.get.property
---   simp only [PartialListLike.isNil]
---   rw [prop_tail.eq_baseTail]
---   simp [PartialListLike.tail]
---   rw [prop.eq_baseTail]
---   use k_tail + 1 + k'
---   simp only [Function.iterate_add_apply, Function.iterate_succ, Function.iterate_zero,
---     Function.comp_apply, id_eq]
+  go 0 as 0 rfl acc_valid (by omega)
 
--- theorem head_expand  {α : Type u} {β : Type v} {as : Filtered α β}
---     {k : Nat} (not_nil : _) :
---     ∃ not_nil',
---     PartialListLike.head (PartialListLike.tail^[k] as) not_nil =
---     as.inst.head ↑(Thunk.get (PartialListLike.tail^[k] as).baseTail) not_nil' := by
---   revert as
---   induction k with
---   | zero =>
---     intro as not_nil
---     use not_nil
---     simp only [PartialListLike.tail, Nat.zero_eq, Function.iterate_zero, id_eq,
---       PartialListLike.head, implies_true]
---   | succ k ih =>
---     intro as
---     have := ih (as := PartialListLike.tail as)
---     simp_all only [tail_inst, not_false_eq_true, implies_true, Function.iterate_succ,
---       Function.comp_apply]
+@[simp]
+theorem iterate_tail_base {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
+    (PartialListLike.tail^[n] as).base = as.inst.tail^[baseIterTailIterate as n] as.base := by
+  exact baseIterTailIterate as n |>.property.eq
 
--- theorem head_tail {α : Type u} {β : Type v} {as : Filtered α β} {not_nil : _} :
---     ∃ (k : Nat) (not_nil' : _),
---     PartialListLike.head (PartialListLike.tail as) not_nil =
---     as.inst.head (as.inst.tail^[k] as.base) not_nil' := by
---   have ⟨not_nil', head_eq⟩ := head_expand (as := as) (k := 1) not_nil
---   simp only [Function.iterate_succ, Function.iterate_zero, Function.comp_apply, id_eq] at head_eq
---   rw [head_eq]
+structure  baseTailIterTailIterate.Property {α : Type u} {β : Type v}
+    (as : Filtered α β) (n : Nat) (out : Nat) :
+    Prop where
+  eq : (PartialListLike.tail^[n] as).baseTail = as.inst.tail^[out] as.base
+  n_le : n ≤ out
 
---   have ⟨k_tail, prop_tail⟩ := (PartialListLike.tail as).baseTail.get.property
---   have ⟨k', prop⟩ := as.baseTail.get.property
---   use k_tail + 1 + k'
-
---   use ?not_nil'
---   case not_nil' =>
---     by_contra not_nil'
---     clear head_eq
---     revert not_nil
---     simp only [imp_false, not_not]
---     simp only [PartialListLike.isNil]
---     rw [prop_tail.eq_baseTail]
---     simp [PartialListLike.tail]
---     rw [prop.eq_baseTail]
---     simp_all only [Function.iterate_succ, Function.iterate_zero, Function.comp_apply, id_eq,
---       tail_inst, tail_decP, Function.iterate_add_apply]
-
---   conv =>
---     lhs
---     arg 1
---     rw [prop_tail.eq_baseTail]
-
---   simp only [PartialListLike.tail]
-
---   conv =>
---     lhs
---     arg 1
---     arg 3
---     rw [prop.eq_baseTail]
-
---   simp only [Function.iterate_add_apply, Function.iterate_succ, Function.iterate_zero,
---     Function.comp_apply, id_eq]
-
-
--- @[simp]
--- theorem iterate_tail_base {α : Type u} {β : Type v} (as : Filtered α β) (k : Nat)  :
---     ∃ (k' : Nat) (_ : k ≤ k') ,
---     (PartialListLike.tail^[k] as).base =
---     as.inst.tail^[k'] as.base := by
---   revert as
---   induction k with
---   | zero =>
---     intro as
---     use 0
---     simp only [PartialListLike.tail, Nat.zero_eq, Function.iterate_zero, id_eq, le_refl,
---       exists_const]
---   | succ k ih =>
---     intro as
---     have ⟨k', le , ih⟩ := ih (as := PartialListLike.tail as)
---     have ⟨k'', prop⟩ := property as
---     have := prop.tail_base
---     use k' + k'' + 1
---     constructor
---     case h.w =>
---       omega
---     simp_all only [tail_inst, Function.iterate_succ, Function.comp_apply,
---       Function.iterate_add_apply, Function.iterate_zero, id_eq]
-
--- theorem isNil_iterate_tail  {α : Type u} {β : Type v} (as : Filtered α β) (k : Nat) :
---     ∃ (k' : Nat) (_ : k ≤ k'),
---     PartialListLike.isNil (PartialListLike.tail^[k] as) ↔
---     as.inst.isNil (as.inst.tail^[k'] as.base)  := by
---   revert as
---   induction k with
---   | zero =>
---     intro as
---     have ⟨k', prop⟩ := as.baseTail.get.property
---     use k'
---     simp only [PartialListLike.isNil, Nat.zero_eq, Function.iterate_zero, id_eq, zero_le,
---       exists_const]
---     rw [prop.eq_baseTail]
---   | succ k ih =>
---     intro as
---     replace ⟨k', _, ih⟩ := ih (as := PartialListLike.tail as)
---     have ⟨k'', prop⟩ := property as
---     have := prop.tail_base
---     use k' + k'' + 1
---     constructor
---     case h.w =>
---       omega
---     simp_all only [tail_inst, Function.iterate_succ, Function.comp_apply,
---       Function.iterate_add_apply, Function.iterate_zero, id_eq]
-
--- theorem head_iterate_tail  {α : Type u} {β : Type v} (as : Filtered α β)
---     (k : Nat) (not_nil : _) :
---     ∃ (k' : Nat) (_ : k ≤ k') (not_nil' : _),
---     PartialListLike.head (PartialListLike.tail^[k] as) not_nil =
---     as.inst.head (as.inst.tail^[k'] as.base) not_nil' := by
---   revert as
---   induction k with
---   | zero =>
---     intro as not_nil
---     have ⟨k', prop⟩ := as.baseTail.get.property
---     use k'
---     simp only [PartialListLike.head, Nat.zero_eq, Function.iterate_zero, id_eq]
---     simp only [Nat.zero_eq, Function.iterate_zero, id_eq] at not_nil
---     constructor
---     case h.w =>
---       omega
---     constructor
---     case h.w =>
---       simp [PartialListLike.isNil] at not_nil
---       rw [prop.eq_baseTail] at not_nil
---       exact not_nil
-
---     conv =>
---       lhs
---       arg 1
---       rw [prop.eq_baseTail]
---   | succ k ih =>
---     intro as not_nil'
---     replace ⟨k', _, ih⟩ := ih (as := PartialListLike.tail as) (not_nil := not_nil')
---     have ⟨k'', prop⟩ := property as
---     have := prop.tail_base
---     use k' + k'' + 1
---     constructor
---     case h.w =>
---       omega
---     simp_all only [tail_inst, Function.iterate_succ, Function.comp_apply,
---       Function.iterate_add_apply, Function.iterate_zero, id_eq]
-
-namespace baseTail
-
-theorem tail_PropertyN {α : Type u} {β : Type v} {as : Filtered α β} {n : Nat} :
-    PropertyN (PartialListLike.tail as).inst (PartialListLike.tail as).decP
-      (PartialListLike.tail as).base (PartialListLike.tail as).baseTail.get n =
-    PropertyN as.inst as.decP (PartialListLike.tail as).base
-      (PartialListLike.tail as).baseTail.get n := by
-  simp only [tail_inst, tail_decP]
-
-theorem iterate_tail_PropertyN {α : Type u} {β : Type v} {as : Filtered α β} {n k : Nat} :
-    PropertyN (PartialListLike.tail^[k] as).inst (PartialListLike.tail^[k] as).decP
-      (PartialListLike.tail^[k] as).base (PartialListLike.tail^[k] as).baseTail.get n =
-    PropertyN as.inst as.decP (PartialListLike.tail^[k] as).base
-      (PartialListLike.tail^[k] as).baseTail.get n := by
-  induction k generalizing as with
-  | zero =>
-    simp only [Nat.zero_eq, Function.iterate_zero, id_eq]
-  | succ n ih =>
-    have := ih (as := PartialListLike.tail as)
-    simp_all only [iterate_tail_inst, eq_iff_iff, tail_inst, tail_decP, Function.iterate_succ,
-      Function.comp_apply]
-
-end baseTail
--- namespace PropertyN
-
--- theorem p_head {α : Type u} {β : Type v} {as : Filtered α β} {n : Nat}
---     (prop : PropertyN as.inst as.decP as.base as.baseTail.get n) :
---     (not_nil : ¬ PartialListLike.isNil as) → as.p (PartialListLike.head as not_nil) := by
---   simp [PartialListLike.isNil, PartialListLike.head]
---   rw [prop.eq_baseTail]
---   have := prop.hit
---   simp_all only [valid, implies_true]
-
--- theorem eq_tail_base {α : Type u} {β : Type v} {as : Filtered α β} {n : Nat}
---     (prop : PropertyN as.inst as.decP as.base as.baseTail.get n) :
---     (PartialListLike.tail as).base = as.inst.tail^[n.succ] as.base := by
---   simp only [PartialListLike.tail, Function.iterate_succ_apply']
---   rw [prop.eq_baseTail]
-
--- theorem iff_isNil {α : Type u} {β : Type v} {as : Filtered α β} {n k : Nat}
---     (prop : PropertyN as.inst as.decP (PartialListLike.tail^[k] as).base
---       (PartialListLike.tail^[k] as).baseTail.get n) :
---     PartialListLike.isNil (PartialListLike.tail^[k] as) ↔
---     as.inst.isNil (as.inst.tail^[n] (PartialListLike.tail^[k] as).base) := by
---   simp [Filtered.isNil_expand]
---   have := prop.eq_baseTail
---   rw [prop.eq_baseTail]
-
--- theorem eq_head {α : Type u} {β : Type v} {as : Filtered α β} {n : Nat}
---     (prop : PropertyN as.inst as.decP as.base as.baseTail.get n) (not_nil : _) :
---     PartialListLike.head as not_nil =
---     as.inst.head (as.inst.tail^[n] as.base) (prop.iff_isNil.not.mp not_nil) := by
---   simp [PartialListLike.head]
---   have := prop.eq_baseTail
---   simp_all only
-
--- end baseTail.PropertyN
-
-
-theorem Mem {α : Type u} {β : Type v} (a : α) (as : Filtered α β) :
-    PartialListLike.Mem a as ↔ as.p a ∧ as.inst.Mem a as.base := by
+@[simp]
+def baseTailIterTailIterate {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
+    Subtype (baseTailIterTailIterate.Property as n) :=
+    Subtype.mk (baseTailIter (PartialListLike.tail^[n] as) + baseIterTailIterate as n) <| by
+  have prop := baseIterTailIterate as n |>.property
   constructor
-  · simp only [ProductiveListLike.Mem, forall_exists_index]
-    intro n not_nil a_def
-    have ⟨k, prop⟩ := as.property_iterate_tail n
-    constructor
-    · have := (PartialListLike.tail^[n] as).is_valid not_nil
-      simp_all only [iterate_tail_p]
-    · subst a_def
-      have not_nil' := prop.not_nil_base not_nil
-      use k
-      use not_nil'
-      exact id (prop.head_base not_nil).symm
-  ·
-    intro ⟨p_a, k, not_nil, a_eq⟩
-    subst a_eq
-    have iterateTo : ∃ (n k' : Nat),
-        k ≤ k' ∧ PropertyIterateTail as n k' := by
-      use k
-      have ⟨k', prop⟩ := as.property_iterate_tail k
-      use k'
-      use prop.le
-    have := Classical.dec
-    have ⟨n, ⟨k', k_le_k', prop⟩, least_n⟩ := Nat.findX iterateTo
-    clear iterateTo
-    unfold PartialListLike.Mem
-    use n
-    by_cases n_zero : n = 0
-    · subst n_zero
-      simp?
-      have := prop
-      sorry
-    · have ⟨k', prop⟩ := as.property_iterate_tail n
-      sorry
+  · simp only [eq_baseTail, iterate_tail_inst, iterate_tail_base,
+      ← Function.iterate_add_apply]
+  · have := prop.n_le
+    omega
 
+def baseTailIterTailIterate' {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
+    (baseTailIterTailIterate as n).val =
+    baseIterTailIterate as n + baseTailIter (PartialListLike.tail^[n] as) := by
+  simp only [baseTailIterTailIterate]
+  ring_nf
 
+@[simp]
+theorem baseIterTailIterate_succ {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
+    (baseIterTailIterate as n.succ).val = (baseTailIterTailIterate as n).val.succ := by
+  have model := baseIterTailIterate as n |>.property.model
+  have model_succ := baseIterTailIterate as n.succ |>.property.model
+  simp only [baseIterTailIterate.model_succ] at model_succ
+  simp_all only [baseTailIterTailIterate]
+  ring
+  rfl
 
+@[simp]
+theorem iterate_tail_baseTail {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
+    (PartialListLike.tail^[n] as).baseTail =
+    as.inst.tail^[baseTailIterTailIterate as n] as.base := by
+  exact baseTailIterTailIterate as n |>.property.eq
 
-    subst a_eq
+@[simp]
+theorem baseTailIterTailIterate_zero {α : Type u} {β : Type v} (as : Filtered α β) :
+    baseTailIterTailIterate as 0 = as.baseTailIter := rfl
 
-    let is_match k' := ∃ not_nil', PartialListLike.Mem
-      (as.inst.head (as.inst.tail^[k'] as.base) not_nil') as
+theorem isNil_iterate_tail {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat) :
+    PartialListLike.isNil (PartialListLike.tail^[n] as) ↔
+    as.inst.isNil (as.inst.tail^[baseTailIterTailIterate as n] as.base) := by
+  simp only [PartialListLike.isNil, iterate_tail_inst, eq_baseTail, iterate_tail_base,
+    baseTailIterTailIterate, Function.iterate_add_apply]
 
-    by_cases exists_pred : ∃ k_pred < k,
-      is_match k_pred ∧ ∀ i : Nat, (k_pred < i) → (i < k) → ¬ is_match i
-    · sorry
-    · simp? at exists_pred
-      sorry
-
-
-    -- intro ⟨p_a, k, not_nil, a_eq⟩
-    -- subst a_eq
-    -- unfold PartialListLike.Mem
-    -- induction as with
-    -- | @mk inst p decP base baseTail =>
-    -- simp only at p_a not_nil
-    -- induction k generalizing base with
-    -- | zero =>
-    --   let as : Filtered α β := {p := p, base := base, baseTail := baseTail}
-    --   have ⟨k', prop⟩ := as.property
-    --   use 0
-    --   simp only [Nat.zero_eq, Function.iterate_zero, id_eq] at p_a not_nil ⊢
-    --   by_cases k_zero : 0 < k'
-    --   case pos =>
-    --     have ⟨_, _⟩ := prop.misses 0 k_zero
-    --       |> not_forall.mp
-    --     contradiction
-    --   simp only [not_lt, nonpos_iff_eq_zero] at k_zero
-    --   have not_nil_iff := prop.isNil_base
-    --   simp only [k_zero, Function.iterate_zero, id_eq] at not_nil_iff
-    --   have not_nil' := not_nil_iff.not.mpr not_nil
-    --   use not_nil'
-    --   simp_all only [prop.head_base, Function.iterate_zero, id_eq]
-    -- | succ k ih =>
-    --   -- simp only [Function.iterate_succ, Function.comp_apply] at p_a not_nil
-    --   replace ⟨k', not_nil', ih⟩ := ih (inst.tail base) (mkBaseTail (inst.tail base)) not_nil p_a
-    --   simp only [←Function.iterate_succ_apply] at ih
-    --   use k'.succ
-    --   use sorry
-    --   rw [ih]
-    --   simp only [Function.iterate_succ', Function.comp_apply]
-    --   generalize eq : ({p := p, base := base, baseTail := baseTail} : Filtered α β) = as
-    --   sorry
-
-
-    --   intro as not_nil p_a
-    --   have ⟨k', prop⟩ := as.property
-    --   have ⟨k_tail, prop_tail⟩ := as.property_tail
-    --   by_cases k'_k : k.succ < k'
-    --   · have := prop.misses k k'_k
-
-
-    --     sorry
-    --   · simp only [not_lt] at k'_k
-    --     have := ProductiveListLike.isNil_iterate_tail_of_isNil_iterate_tail k'_k
-    --       (inst := as.inst.toProductiveListLike) (as := as.base) |> not_imp_not.mpr
-    --       <| not_nil
-
-
-    --     sorry
-
--- theorem head_iterate_tail_base_of_head_iterate_tail  {α : Type u} {β : Type v}
---     (as : Filtered α β) (n : Nat) (not_nil : _) :
---     ∃ (m : Nat) (not_nil' : _ ),
---     PartialListLike.head (PartialListLike.tail^[n] as) not_nil =
---     as.inst.head (as.inst.tail^[m] as.base) not_nil' := by
---   revert as
---   induction n with
---   | zero =>
---     simp only [Nat.zero_eq, Function.iterate_zero, id_eq]
---     intro as not_nil
---     have ⟨m, prop⟩ := as.baseTail.get.property
---     use m
---     rw [prop.eq_head not_nil]
---     simp_all only [prop.iff_isNil.not.mp not_nil, not_false_eq_true, exists_const]
---   | succ n ih =>
---     simp only [Function.iterate_succ_apply]
---     intro as not_nil
---     have ⟨m, prop⟩ := (PartialListLike.tail as).baseTail.get.property
---     have := ih (as := PartialListLike.tail as) (not_nil := ?not_nil')
---     case not_nil' =>
---       sorry
---     sorry
+theorem head_iterate_tail {α : Type u} {β : Type v} (as : Filtered α β) (n : Nat)
+    (not_nil : _) :
+    PartialListLike.head (PartialListLike.tail^[n] as) not_nil =
+    as.inst.head (as.inst.tail^[baseTailIterTailIterate as n] as.base)
+    (isNil_iterate_tail as n |>.not.mp not_nil) := by
+  simp only [PartialListLike.head, eq_baseTail, iterate_tail_inst, iterate_tail_base]
+  apply PartialListLike.head_eq_of_head?_eq
+  · simp only [baseTailIterTailIterate, Function.iterate_add_apply]
+  · simp only [iterate_tail_inst]
 
 instance instListLike {α : Type u} {β : Type v} :
     ListLike α (Filtered α β) where
   toPartialListLike := instPartialListLike
   terminal_isNil as := by
-    have ⟨n, prop⟩ := as.baseTail.get.property
-    have ⟨n', prop'⟩:= (PartialListLike.tail as).baseTail.get.property
-    simp only [PartialListLike.isNil] at *
-    rw [prop.eq_baseTail]
-    rw [prop'.eq_baseTail]
-    rw [prop.eq_tail_base]
-    simp only [←Function.iterate_add_apply]
-    apply ProductiveListLike.isNil_iterate_tail_of_isNil_iterate_tail
-      (inst := as.inst.toProductiveListLike)
+    simp only [PartialListLike.isNil]
+    simp only [eq_baseTail, tail_inst, tail_base]
+    simp only [eq_baseTail, iterate_tail_inst, iterate_tail_base, ←Function.iterate_add_apply]
+    intro is_nil
+    refine ProductiveListLike.isNil_iterate_tail_of_isNil_iterate_tail ?_ is_nil
     omega
-  consistent_mem a as := by
+  consistent_mem a as:= by
     constructor
-    · simp [PartialListLike.Mem, Membership.mem]
-      intro n not_nil a_def
-      have ⟨k, prop⟩ := (PartialListLike.tail^[n] as).baseTail.get.property
-      have := prop.p_head not_nil
-      simp_all only [iterate_tail_p, true_and]
-      apply as.inst.consistent_mem
-        (PartialListLike.head (PartialListLike.tail^[n] as) not_nil) as.base |>.mp
-      exact head_iterate_tail_base_of_head_iterate_tail as n _
-    · simp [Membership.mem, PartialListLike.Mem]
-      intro valid mem
-      have ⟨k, not_nil, a_def⟩ := (as.inst.consistent_mem a as.base).mpr mem
-      subst a_def
-      have := head_iterate_tail_base_of_head_iterate_tail as k ?not_nil
-      case not_nil =>
-        sorry
+    · unfold PartialListLike.Mem
+      intro ⟨n, not_nil, a_def⟩
+      simp [Membership.mem]
+      constructor
+      · subst a_def
+        simp only [isNil_iterate_tail] at not_nil
+        simp only [PartialListLike.head, eq_baseTail, iterate_tail_inst, iterate_tail_base]
+        have := (PartialListLike.tail^[n] as).hit <| by
+          simp_all only [PartialListLike.isNil, iterate_tail_inst, eq_baseTail, iterate_tail_base,
+            baseTailIterTailIterate, not_false_eq_true]
+        simp_all only [iterate_tail_inst, iterate_tail_base, iterate_tail_p]
+      · apply as.inst.consistent_mem a as.base |>.mp
+        subst a_def
+        unfold PartialListLike.Mem
+        simp [isNil_iterate_tail] at not_nil
+        use(baseTailIterTailIterate as n).val
+        use not_nil
+        simp only [head_iterate_tail]
+    · intro ⟨p_a, a_def⟩
+      replace ⟨k, not_nil, a_def⟩ := as.inst.consistent_mem a as.base |>.mpr a_def
+      have exists_n: ∃ (n : Nat), k ≤ (baseTailIterTailIterate as n).val := by
+        use k
+        exact (baseTailIterTailIterate as k).property.n_le
+      let ⟨n, k_le, least⟩ := Nat.findX exists_n
+      use n
 
-      sorry
+      have le_k : (baseIterTailIterate as n).val ≤ k := by
+        by_cases n_zero : n = 0
+        · subst n_zero
+          exact Int.ofNat_le.mp (Int.NonNeg.mk (k + 0))
+        · have n_def := Nat.succ_pred n_zero
+          generalize n.pred = m at *
+          subst n_def
+          replace least := least (m := m) <| by
+            omega
+          simp_all only [baseTailIterTailIterate, Function.iterate_succ, Function.comp_apply,
+            baseIterTailIterate_succ, Nat.succ_ne_zero, not_false_eq_true, not_le, Nat.succ_le]
+
+      have ⟨k', k_def⟩ := Nat.exists_eq_add_of_le le_k
+
+      have k'_eq : ¬ k' < baseTailIter (PartialListLike.tail^[n] as) := by
+        by_contra k'_lt
+        have := (PartialListLike.tail^[n] as).misses k'_lt
+        revert this
+        unfold validBaseTail
+        simp only [iterate_tail_inst, iterate_tail_p, iterate_tail_base, imp_false, not_not]
+        intro not_nil
+        revert p_a
+        apply Iff.mp
+        apply iff_of_eq
+        apply congrArg
+        rw [a_def]
+        apply PartialListLike.head_eq_of_head?_eq
+        · rw [k_def]
+          simp only [← Function.iterate_add_apply]
+          ring_nf
+        · simp_all only [baseTailIterTailIterate, not_le, le_add_iff_nonneg_right, zero_le,
+          not_exists, iterate_tail_inst]
+
+      replace k'_eq : k' = baseTailIter (PartialListLike.tail^[n] as) := by
+        simp_all only [baseTailIterTailIterate, not_le, le_add_iff_nonneg_right, zero_le, not_lt]
+        omega
+      subst k'_eq
+
+      use ?not_nil1
+      case not_nil1 =>
+        simp only [isNil_iterate_tail]
+        subst k_def
+        simp only [←baseTailIterTailIterate'] at not_nil
+        exact not_nil
+
+      subst a_def
+      apply PartialListLike.head_eq_of_head?_eq
+      · rw [k_def]
+        simp only [eq_baseTail, iterate_tail_inst, iterate_tail_base, ← Function.iterate_add_apply]
+        apply congrFun
+        apply congrArg
+        ring_nf
+      · apply congrFun
+        simp only [iterate_tail_inst]
   finite as := by
-    have ⟨n , finite⟩ := as.inst.finite as.base
+    unfold PartialListLike.isFinite
+    have ⟨n, is_nil⟩ := as.inst.finite as.base
     use n
-    revert finite as
-    induction n with
-    | zero =>
-      intro as
-      have ⟨n, prop⟩ := as.baseTail.get.property
-      simp only [Nat.zero_eq, Function.iterate_zero, id_eq, PartialListLike.isNil,
-        Function.iterate_succ, Function.comp_apply, Int.ofNat_eq_coe, Int.Nat.cast_ofNat_Int,
-        Nat.cast_ofNat, eq_mpr_eq_cast, prop.eq_baseTail]
-      apply ProductiveListLike.isNil_iterate_tail
-        (inst := as.inst.toProductiveListLike)
-    | succ n ih =>
-      intro as finite
-      apply ih (PartialListLike.tail as)
-      have ⟨k, prop⟩ := as.baseTail.get.property
-      rw [prop.eq_tail_base]
-      simp only [←Function.iterate_add_apply]
-      revert finite
-      apply ProductiveListLike.isNil_iterate_tail_of_isNil_iterate_tail
-        (inst := as.inst.toProductiveListLike)
-      omega
+    simp only [PartialListLike.isNil, eq_baseTail, iterate_tail_inst,
+      iterate_tail_base, ←Function.iterate_add_apply]
+
+    refine ProductiveListLike.isNil_iterate_tail_of_isNil_iterate_tail ?_ is_nil
+    have := (baseIterTailIterate as n).property.n_le
+    omega

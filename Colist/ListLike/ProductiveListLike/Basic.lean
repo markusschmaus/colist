@@ -73,10 +73,10 @@ theorem isNil_iterate_tail {α : Type u} {β : Type v}
 
 @[simp]
 theorem isNil_iterate_tail_of_isNil_iterate_tail {α : Type u} {β : Type v}
-    [inst : ProductiveListLike α β] {as : β} {n m: ℕ} :
+    {inst : ProductiveListLike α β} {as : β} {n m: ℕ} :
     (n ≤ m) →
-    PartialListLike.isNil (PartialListLike.tail^[n] as) →
-    PartialListLike.isNil (PartialListLike.tail^[m] as) := by
+    inst.isNil (inst.tail^[n] as) →
+    inst.isNil (inst.tail^[m] as) := by
   intro n_le_m
   have ⟨k, k_def⟩ := Nat.exists_eq_add_of_le n_le_m
   rw [add_comm] at k_def
