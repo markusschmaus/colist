@@ -355,7 +355,8 @@ instance instListLike {α : Type u} {β : Type v} :
     omega
   consistent_mem a as:= by
     constructor
-    · unfold PartialListLike.Mem
+    case mp =>
+      unfold PartialListLike.Mem
       intro ⟨n, not_nil, a_def⟩
       simp [Membership.mem]
       constructor
@@ -373,66 +374,65 @@ instance instListLike {α : Type u} {β : Type v} :
         use(baseTailIterTailIterate as n).val
         use not_nil
         simp only [head_iterate_tail]
-    · intro ⟨p_a, a_def⟩
+    case mpr =>
+      intro ⟨p_a, a_def⟩
+
+      -- Find the smallest n such that k ≤ (baseTailIterTailIterate as n).val
       replace ⟨k, not_nil, a_def⟩ := as.inst.consistent_mem a as.base |>.mpr a_def
       have exists_n: ∃ (n : Nat), k ≤ (baseTailIterTailIterate as n).val := by
         use k
         exact (baseTailIterTailIterate as k).property.n_le
       let ⟨n, k_le, least⟩ := Nat.findX exists_n
+      clear exists_n
       use n
 
-      have le_k : (baseIterTailIterate as n).val ≤ k := by
-        by_cases n_zero : n = 0
-        · subst n_zero
-          exact Int.ofNat_le.mp (Int.NonNeg.mk (k + 0))
-        · have n_def := Nat.succ_pred n_zero
-          generalize n.pred = m at *
-          subst n_def
-          replace least := least (m := m) <| by
-            omega
-          simp_all only [baseTailIterTailIterate, Function.iterate_succ, Function.comp_apply,
-            baseIterTailIterate_succ, Nat.succ_ne_zero, not_false_eq_true, not_le, Nat.succ_le]
+      -- Show that for this n actually k = (baseTailIterTailIterate as n).val
+      have k_eq : k = (baseTailIterTailIterate as n).val := by
+        apply Nat.eq_iff_le_and_ge.mpr
+        simp_all only [not_le, true_and]
 
-      have ⟨k', k_def⟩ := Nat.exists_eq_add_of_le le_k
+        have le_k : (baseIterTailIterate as n).val ≤ k := by
+          by_cases n_zero : n = 0
+          · subst n_zero
+            exact Int.ofNat_le.mp (Int.NonNeg.mk (k + 0))
+          · have n_def := Nat.succ_pred n_zero
+            generalize n.pred = m at *
+            subst n_def
+            replace least := least (m := m) <| by
+              omega
+            simp_all only [baseTailIterTailIterate, Function.iterate_succ, Function.comp_apply,
+              baseIterTailIterate_succ, Nat.succ_ne_zero, not_false_eq_true, not_le, Nat.succ_le]
 
-      have k'_eq : ¬ k' < baseTailIter (PartialListLike.tail^[n] as) := by
-        by_contra k'_lt
-        have := (PartialListLike.tail^[n] as).misses k'_lt
-        revert this
-        unfold validBaseTail
-        simp only [iterate_tail_inst, iterate_tail_p, iterate_tail_base, imp_false, not_not]
-        intro not_nil
-        revert p_a
-        apply Iff.mp
-        apply iff_of_eq
-        apply congrArg
-        rw [a_def]
-        apply PartialListLike.head_eq_of_head?_eq
-        · rw [k_def]
-          simp only [← Function.iterate_add_apply]
-          ring_nf
-        · simp_all only [baseTailIterTailIterate, not_le, le_add_iff_nonneg_right, zero_le,
-          not_exists, iterate_tail_inst]
+        have ⟨k', k_def⟩ := Nat.exists_eq_add_of_le le_k
+        have k'_eq : ¬ k' < baseTailIter (PartialListLike.tail^[n] as) := by
+          by_contra k'_lt
+          have := (PartialListLike.tail^[n] as).misses k'_lt
+          revert this
+          unfold validBaseTail
+          simp only [iterate_tail_inst, iterate_tail_p, iterate_tail_base, imp_false, not_not]
+          intro not_nil
+          revert p_a
+          apply Iff.mp
+          apply iff_of_eq
+          apply congrArg
+          apply PartialListLike.head_eq_of_head?_eq
+          · rw [k_def]
+            simp only [← Function.iterate_add_apply]
+            ring_nf
+          · simp_all only [baseTailIterTailIterate, not_le, le_add_iff_nonneg_right, zero_le,
+            not_exists, iterate_tail_inst]
 
-      replace k'_eq : k' = baseTailIter (PartialListLike.tail^[n] as) := by
-        simp_all only [baseTailIterTailIterate, not_le, le_add_iff_nonneg_right, zero_le, not_lt]
+        simp_all only [baseTailIterTailIterate, le_add_iff_nonneg_right, zero_le, not_lt, ge_iff_le]
         omega
-      subst k'_eq
+      subst k_eq
 
-      use ?not_nil1
-      case not_nil1 =>
-        simp only [isNil_iterate_tail]
-        subst k_def
-        simp only [←baseTailIterTailIterate'] at not_nil
-        exact not_nil
-
+      -- The rest is mopping up
+      simp only [isNil_iterate_tail]
+      use not_nil
       subst a_def
       apply PartialListLike.head_eq_of_head?_eq
-      · rw [k_def]
-        simp only [eq_baseTail, iterate_tail_inst, iterate_tail_base, ← Function.iterate_add_apply]
-        apply congrFun
-        apply congrArg
-        ring_nf
+      · simp only [baseTailIterTailIterate, eq_baseTail, iterate_tail_inst, iterate_tail_base, ←
+        Function.iterate_add_apply]
       · apply congrFun
         simp only [iterate_tail_inst]
   finite as := by
