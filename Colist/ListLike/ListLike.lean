@@ -1,1 +1,1 @@
-import Colist.ListLike.ListLike.Basic
+import Colist.ListLike.Class.Basic

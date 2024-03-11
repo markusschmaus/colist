@@ -1,5 +1,5 @@
-import Colist.ListLike.AnyProductiveListLike
-import Colist.ListLike.ListLike.Basic
+import Colist.ProductiveListLike.Any.Basic
+import Colist.ListLike.Class.Basic
 import Colist.util.Subtype
 
 universe u v

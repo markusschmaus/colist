@@ -1,4 +1,4 @@
-import Colist.ListLike.ListLike.Basic
+import Colist.ListLike.Class.Basic
 import Colist.util.Option
 import Colist.util.Function
 

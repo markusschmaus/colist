@@ -1,4 +1,4 @@
-import Colist.ListLike.ProductiveListLike.Basic
+import Colist.ProductiveListLike.Class.Basic
 
 universe u v w
 

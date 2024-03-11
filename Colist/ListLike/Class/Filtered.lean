@@ -1,8 +1,6 @@
-import Colist.ListLike.AnyListLike
-import Colist.ListLike.ProductiveListLike.Mem
-import Colist.ListLike.ProductiveListLike.Pairwise
 import Colist.util.Option
 import Colist.util.Function
+import Colist.ListLike.Class.Basic
 
 universe u v
 
@@ -445,3 +443,9 @@ instance instListLike {α : Type u} {β : Type v} :
     refine ProductiveListLike.isNil_iterate_tail_of_isNil_iterate_tail ?_ is_nil
     have := (baseIterTailIterate as n).property.n_le
     omega
+
+end Filtered
+
+def filter {α : Type u} {β : Type v} [inst : ListLike α β]
+    (p : α → Prop) [decP : DecidablePred p] (b : β): Filtered α β :=
+  {base := b, p := p}

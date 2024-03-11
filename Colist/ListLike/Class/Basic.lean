@@ -1,6 +1,5 @@
 import Mathlib.Tactic
-import Colist.ListLike.ProductiveListLike.Basic
-
+import Colist.ProductiveListLike.Class.Basic
 universe u v w
 
 class ListLike (α : outParam (Type u)) (β : Type v) extends ProductiveListLike α β : Type (max u v) where

@@ -1,4 +1,4 @@
-import Colist.ListLike.PartialListLike.Basic
+import Colist.PartialListLike.Class.Basic
 
 
 class ProductiveListLike (α : outParam (Type u)) (β : Type v)
