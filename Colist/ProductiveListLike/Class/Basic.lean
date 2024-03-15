@@ -54,13 +54,13 @@ theorem isFinite_iterate_tail {α : Type u} {β : Type v}
 
 @[simp]
 theorem isNil_tail {α : Type u} {β : Type v}
-    [inst : ProductiveListLike α β] {as : β} :
+    {inst : ProductiveListLike α β} {as : β} :
     PartialListLike.isNil as → PartialListLike.isNil (PartialListLike.tail as) :=
   fun a => terminal_isNil as a
 
 @[simp]
 theorem isNil_iterate_tail {α : Type u} {β : Type v}
-    [inst : ProductiveListLike α β] {as : β} {n : ℕ} :
+    {inst : ProductiveListLike α β} {as : β} {n : ℕ} :
     PartialListLike.isNil as → PartialListLike.isNil (PartialListLike.tail^[n] as) := by
   revert as
   induction n with
