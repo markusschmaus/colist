@@ -139,79 +139,86 @@ def fromRemaining (prop : Property as out)
 
 end tailX.Property
 
+def nextCurrentX (as : Bound α α' β β')
+    (not_nil : as.instCurrent.isNil (as.instCurrent.tail as.current) →
+    as.inst'.isNil as.remaining) :
+    Subtype (tailX.Property.FromCurrent as) :=
+  have isNil_remaining_of_current := not_nil
+  have not_isNil_of_remaining n not_nil' :=
+    as.not_isNil_of_remaining n not_nil'
+
+  Subtype.mk
+    {inst := as.inst, inst' := as.inst', f := as.f, index := as.index,
+      instCurrent := as.instCurrent, current := as.instCurrent.tail as.current,
+      remaining := as.remaining,
+      isNil_remaining_of_current := isNil_remaining_of_current,
+      not_isNil_of_remaining := not_isNil_of_remaining}
+    <| by
+      constructor
+      all_goals simp only [heq_eq_eq]
+
+def nextRemainingX (as : Bound α α' β β') (not_nil : ¬ as.inst'.isNil as.remaining) :
+    Subtype (tailX.Property.FromRemaining as not_nil) :=
+  let new_index := as.inst'.head as.remaining not_nil
+  let new_instCurrent := as.inst new_index
+  let new_current := as.f new_index
+  let new_remaining := as.inst'.tail as.remaining
+
+  have isNil_remaining_of_current nil_head := by
+    have := as.not_isNil_of_remaining 0 not_nil
+    simp_all only [not_not, PartialBound.getIndex, Function.iterate_zero, id_eq,
+      PartialBound.getListLike, not_true_eq_false]
+  have not_isNil_of_remaining n not_nil' := by
+    unfold_let at *
+    have := as.not_isNil_of_remaining n.succ <| by
+      simp_all only [not_not, Function.iterate_succ, Function.comp_apply,
+        not_false_eq_true]
+    simp_all only [not_not, id_eq, PartialBound.getIndex, Function.iterate_succ,
+      Function.comp_apply, PartialBound.getListLike, not_false_eq_true]
+
+  Subtype.mk
+    { inst := as.inst, inst' := as.inst', f := as.f, index := new_index,
+      instCurrent := new_instCurrent, current := new_current,
+      remaining := new_remaining,
+      isNil_remaining_of_current := isNil_remaining_of_current,
+      not_isNil_of_remaining := not_isNil_of_remaining}
+    <| by
+      constructor
+      all_goals simp only [heq_eq_eq]
+
 def tailX (as : Bound α α' β β') : Subtype (tailX.Property as) :=
     let head := as.instCurrent.tail as.current
     if not_nil : ¬ as.instCurrent.isNil head then
-      have isNil_remaining_of_current a := (not_nil a).elim
-      have not_isNil_of_remaining n not_nil' :=
-        as.not_isNil_of_remaining n not_nil'
+      let result := nextCurrentX as fun a => (not_nil a).elim
 
-      Subtype.mk
-        {inst := as.inst, inst' := as.inst', f := as.f, index := as.index,
-          instCurrent := as.instCurrent, current := head, remaining := as.remaining,
-          isNil_remaining_of_current := isNil_remaining_of_current,
-          not_isNil_of_remaining := not_isNil_of_remaining}
-        <| by
+      Subtype.mk result.val <| by
           apply tailX.Property.current
           · simp_all only [IsEmpty.forall_iff, not_false_eq_true]
-          constructor
-          all_goals simp only [heq_eq_eq]
-    else if not_nil_tail : ¬ as.inst'.isNil as.remaining then
-      let new_index := as.inst'.head as.remaining not_nil_tail
-      let new_instCurrent := as.inst new_index
-      let new_current := as.f new_index
-      let new_remaining := as.inst'.tail as.remaining
+          exact result.property
 
-      have isNil_remaining_of_current nil_head := by
-        have := as.not_isNil_of_remaining 0 not_nil_tail
-        simp_all only [not_not, PartialBound.getIndex, Function.iterate_zero, id_eq,
-          PartialBound.getListLike, not_true_eq_false]
-      have not_isNil_of_remaining n not_nil' := by
-        unfold_let at *
-        have := as.not_isNil_of_remaining n.succ <| by
-          simp_all only [not_not, Function.iterate_succ, Function.comp_apply,
-            not_false_eq_true]
-        simp_all only [not_not, id_eq, PartialBound.getIndex, Function.iterate_succ,
-          Function.comp_apply, PartialBound.getListLike, not_false_eq_true]
-
-      Subtype.mk
-        { inst := as.inst, inst' := as.inst', f := as.f, index := new_index,
-          instCurrent := new_instCurrent, current := new_current,
-          remaining := new_remaining,
-          isNil_remaining_of_current := isNil_remaining_of_current,
-          not_isNil_of_remaining := not_isNil_of_remaining}
-        <| by
+    else if not_nil_remaining : ¬ as.inst'.isNil as.remaining then
+      let result := nextRemainingX as not_nil_remaining
+      Subtype.mk result.val <| by
           apply tailX.Property.remaining
           case current_short =>
-            have := as.isNil_remaining_of_current
-            simp_all only [not_not, imp_false]
+            simp_all only [not_not]
           case remaining_not_nil =>
-            exact not_nil_tail
-          constructor
-          all_goals simp only [heq_eq_eq]
+            exact not_nil_remaining
+          exact result.property
 
     else
-      have isNil_remaining_of_current a := by
-        simp_all only [not_true_eq_false, not_false_eq_true, not_not]
-      have not_isNil_of_remaining n not_nil' :=
-        as.not_isNil_of_remaining n not_nil'
+      let result := nextCurrentX as <| by
+        simp_all only [not_not, forall_true_left]
 
-      Subtype.mk
-        { inst := as.inst, inst' := as.inst', f := as.f, index := as.index,
-          instCurrent := as.instCurrent, current := head, remaining := as.remaining,
-          isNil_remaining_of_current := isNil_remaining_of_current,
-          not_isNil_of_remaining := not_isNil_of_remaining}
-        <| by
+      Subtype.mk result.val <| by
           apply tailX.Property.nil
           case current_short =>
-            simp_all only [not_not, forall_true_left, ProductiveListLike.isNil_iterate_tail,
-              not_true_eq_false, eq_mp_eq_cast, id_eq, IsEmpty.forall_iff, forall_const]
+            simp only [not_not] at not_nil
+            exact not_nil
           case remaining_nil =>
-            simp_all only [not_not, forall_true_left, ProductiveListLike.isNil_iterate_tail,
-              not_true_eq_false, eq_mp_eq_cast, id_eq, IsEmpty.forall_iff, forall_const]
-          constructor
-          all_goals simp only [heq_eq_eq]
-
+            simp only [not_not] at not_nil_remaining
+            exact not_nil_remaining
+          exact result.property
 
 instance instPartialListLike : PartialListLike α (Bound α α' β β') where
   isNil as := as.instCurrent.isNil as.current
@@ -250,27 +257,90 @@ theorem length_current {as : Bound α α' β β'}
   have := length_eqRec prop.index prop.instCurrent prop.current
   simp_all only [prop.instCurrent, prop.current, length_tail]
 
-end tailX.Property.FromCurrent
+theorem length_remaining {as : Bound α α' β β'}
+    {out : Bound α α' β β'} (prop : FromCurrent as out) :
+    out.inst'.length out.remaining  = as.inst'.length as.remaining := by
+  simp_all only [prop.inst', prop.remaining]
 
-noncomputable abbrev finiteBy (as : Bound α α' β β') : Lex (Nat × Nat) :=
-  toLex (as.inst'.length as.remaining, as.instCurrent.length as.current)
+end FromCurrent
 
-theorem decreasingBy (as : Bound α α' β β') (not_nil : ¬ PartialListLike.isNil as) :
-    (PartialListLike.tail as).finiteBy < as.finiteBy := by
-  simp [←length_zero_iff_isNil, PartialListLike.isNil] at not_nil
-  unfold finiteBy
-  simp only [Prod.Lex.lt_iff]
-  induction as.tail_property with
-  | current _ prop =>
-    simp_all only [prop.inst', prop.remaining, lt_self_iff_false, prop.length_current, ne_eq,
-      not_false_eq_true, Nat.pred_lt, and_self, or_true]
-  | remaining _ _ prop =>
-    simp_all? [prop.remaining, length_tail, prop.inst']
-    simp_all?
-    sorry
-  | nil _ _ prop =>
-    simp_all?
-    sorry
+namespace FromRemaining
+
+theorem length_remaining {as : Bound α α' β β'} {not_nil}
+    {out : Bound α α' β β'} (prop : FromRemaining as not_nil out) :
+    out.inst'.length out.remaining  = (as.inst'.length as.remaining).pred := by
+  simp_all only [prop.inst', prop.remaining, length_tail]
+
+end tailX.Property.FromRemaining
+
+noncomputable abbrev lengthCurrent (as : Bound α α' β β') : Nat :=
+  as.instCurrent.length as.current
+
+noncomputable abbrev lengthRemaining (as : Bound α α' β β') : Nat :=
+  as.inst'.length as.remaining
+
+@[simp]
+theorem decreasing_length_current_remaining {as : Bound α α' β β'}
+    (not_nil : ¬ PartialListLike.isNil as):
+    Prod.Lex (fun a₁ a₂ => a₁ < a₂) (fun a₁ a₂ => a₁ < a₂)
+    (lengthRemaining (PartialListLike.tail as), lengthCurrent (PartialListLike.tail as))
+    (lengthRemaining as, lengthCurrent as) := by
+  induction as.tail_property
+  case current _ prop =>
+    apply Prod.Lex.right'
+    · simp only [prop.length_remaining, le_refl]
+    simp only [prop.length_current]
+    apply Nat.pred_lt
+    apply length_zero_iff_isNil.not.mpr
+    simp_all only [PartialListLike.isNil, not_false_eq_true]
+  case remaining _ r_not_nil prop =>
+    apply Prod.Lex.left
+    simp only [lengthRemaining, prop.inst', prop.remaining, length_tail]
+    apply Nat.pred_lt
+    apply length_zero_iff_isNil.not.mpr
+    exact r_not_nil
+  case nil _ _ prop =>
+    apply Prod.Lex.right'
+    · simp only [prop.length_remaining, le_refl]
+    simp only [prop.length_current]
+    apply Nat.pred_lt
+    apply length_zero_iff_isNil.not.mpr
+    simp_all only [PartialListLike.isNil, not_false_eq_true]
+
+noncomputable def length (as : Bound α α' β β') :
+    Subtype fun n : Nat => PartialListLike.isNil (PartialListLike.tail^[n] as) :=
+  let rec go n current (h : current = PartialListLike.tail^[n] as) :=
+    if nil : PartialListLike.isNil current then
+      Subtype.mk n <| by
+        simp_all only
+    else
+      go n.succ (PartialListLike.tail current) <| by
+        simp_all only [h, Function.iterate_succ', Function.comp_apply, not_false_eq_true]
+  termination_by (current.lengthRemaining, current.lengthCurrent)
+  decreasing_by
+    simp_wf
+    simp_all only [not_false_eq_true, decreasing_length_current_remaining]
+
+  go 0 as <| by
+    simp only [Function.iterate_zero, id_eq]
+
+-- noncomputable def find (as : Bound α α' β β') :
+--     Subtype fun n : Nat => PartialListLike.isNil (PartialListLike.tail^[n] as) :=
+--   let rec go n current (h : current = PartialListLike.tail^[n] as) :=
+--     if nil : PartialListLike.isNil current then
+--       Subtype.mk n <| by
+--         simp_all only
+--     else
+--       go n.succ (PartialListLike.tail current) <| by
+--         simp_all only [h, Function.iterate_succ', Function.comp_apply, not_false_eq_true]
+--   termination_by (current.lengthRemaining, current.lengthCurrent)
+--   decreasing_by
+--     simp_wf
+--     simp_all only [not_false_eq_true, decreasing_length_current_remaining]
+
+--   go 0 as <| by
+--     simp only [Function.iterate_zero, id_eq]
+
 
 instance instListLike : ListLike α (Bound α α' β β') where
   toPartialListLike := instPartialListLike
@@ -282,36 +352,14 @@ instance instListLike : ListLike α (Bound α α' β β') where
     case nil _ _ prop =>
       simp_all only [PartialListLike.isNil, ProductiveListLike.isNil_tail, prop.isNil_current]
   consistent_mem a as := by
-    sorry
-  finite as := by
-    generalize nr_def : as.inst'.length as.remaining = nr
-    induction nr generalizing as with
-    | zero =>
-      unfold PartialListLike.isFinite
-      use as.instCurrent.length as.current
-      generalize nc_def : as.instCurrent.length as.current = nc
-      induction nc generalizing as with
-      | zero =>
-        simp_all only [Nat.zero_eq, length_zero_iff_isNil, PartialListLike.isNil, id_eq,
-          eq_mp_eq_cast, Function.iterate_zero]
-      | succ nc ih =>
-        apply ih (PartialListLike.tail as)
-        · induction as.tail_property
-          case current _ prop =>
-            simp_all only [Nat.zero_eq, Nat.find_eq_zero, Function.iterate_zero, id_eq,
-              prop.remaining, prop.inst']
-          case remaining _ _ prop =>
-            simp_all only [Nat.zero_eq, length_zero_iff_isNil]
-          case nil _ _ prop =>
-            simp_all only [Nat.zero_eq, Nat.find_eq_zero, Function.iterate_zero, id_eq, prop.inst',
-              prop.remaining]
-        · induction as.tail_property
-          case current _ prop =>
-            simp_all only [Nat.zero_eq, prop.length_current, Nat.pred_succ]
-          case remaining _ _ prop =>
-            simp_all only [Nat.zero_eq, length_zero_iff_isNil]
-          case nil _ _ prop =>
-            simp_all only [Nat.zero_eq, prop.length_current, Nat.pred_succ]
-    | succ n ih =>
+    constructor
+    · simp only [PartialListLike.Mem, Membership.mem]
+      intro ⟨n, not_nil, h⟩
 
       sorry
+    ·
+      sorry
+  finite as := by
+    let n := as.length
+    use n.val
+    exact n.property
