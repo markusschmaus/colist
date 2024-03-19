@@ -229,33 +229,33 @@ def tail_property (as : Bound α α' β β') :
     tailX.Property as (PartialListLike.tail as) :=
   (tailX as |>.property)
 
-theorem isNil_eqRec {index : α'} {index' : α'}
-    {inst : ListLike α (β index)} {inst' : ListLike α (β index')}
+theorem eqRec {γ : Type w} (g : (index : α') → ListLike α (β index) → β index → γ)
+    {index : α'} {index' : α'} {inst : ListLike α (β index)}
+    {inst' : ListLike α (β index')}
     (eq_index : index = index') (eq_inst : inst = eq_index ▸ inst')
     {as : β index} {as' : β index'}
-    (as_eq : as = eq_index ▸ as' ) : inst.isNil as ↔ inst'.isNil as' := by
-  aesop
-
-theorem length_eqRec {index : α'} {index' : α'}
-    {inst : ListLike α (β index)} {inst' : ListLike α (β index')}
-    (eq_index : index = index') (eq_inst : inst = eq_index ▸ inst')
-    {as : β index} {as' : β index'}
-    (as_eq : as = eq_index ▸ as' ) : inst.length as = inst'.length as' := by
+    (as_eq : as = eq_index ▸ as' ) : g index inst as = g index' inst' as' := by
   aesop
 
 namespace tailX.Property.FromCurrent
 
+theorem g_current {γ : Type w} (g : (index : α') → ListLike α (β index) → β index → γ)
+    {as : Bound α α' β β'} {out : Bound α α' β β'} (prop : FromCurrent as out) :
+    g out.index out.instCurrent out.current  = g as.index as.instCurrent (as.instCurrent.tail as.current) := by
+  have := eqRec g prop.index prop.instCurrent prop.current
+  simp_all only [prop.instCurrent, prop.current]
+
 theorem isNil_current {as : Bound α α' β β'}
     {out : Bound α α' β β'} (prop : FromCurrent as out) :
     out.instCurrent.isNil out.current  = as.instCurrent.isNil (as.instCurrent.tail as.current) := by
-  have := isNil_eqRec prop.index prop.instCurrent prop.current
-  simp_all only [prop.instCurrent, prop.current]
+  have := prop.g_current (fun _ inst as => inst.isNil as)
+  simp_all only [eq_iff_iff]
 
 theorem length_current {as : Bound α α' β β'}
     {out : Bound α α' β β'} (prop : FromCurrent as out) :
     out.instCurrent.length out.current  = (as.instCurrent.length as.current).pred := by
-  have := length_eqRec prop.index prop.instCurrent prop.current
-  simp_all only [prop.instCurrent, prop.current, length_tail]
+  have := prop.g_current (fun _ inst as => inst.length as)
+  simp_all only [length_tail]
 
 theorem length_remaining {as : Bound α α' β β'}
     {out : Bound α α' β β'} (prop : FromCurrent as out) :
@@ -265,6 +265,15 @@ theorem length_remaining {as : Bound α α' β β'}
 end FromCurrent
 
 namespace FromRemaining
+
+theorem g_current {γ : Type w} (g : (index : α') → ListLike α (β index) → β index → γ)
+    {as : Bound α α' β β'} {not_nil} {out : Bound α α' β β'}
+    (prop : FromRemaining as not_nil out) :
+    let index' := as.inst'.head as.remaining not_nil
+    g out.index out.instCurrent out.current  =
+    g index' (as.inst index') (as.f (as.inst'.head as.remaining not_nil)) := by
+  have := eqRec g prop.index prop.instCurrent prop.current
+  simp_all only [prop.instCurrent, prop.current]
 
 theorem length_remaining {as : Bound α α' β β'} {not_nil}
     {out : Bound α α' β β'} (prop : FromRemaining as not_nil out) :
@@ -281,7 +290,7 @@ noncomputable abbrev lengthRemaining (as : Bound α α' β β') : Nat :=
 
 @[simp]
 theorem decreasing_length_current_remaining {as : Bound α α' β β'}
-    (not_nil : ¬ PartialListLike.isNil as):
+    (not_nil : ¬ PartialListLike.isNil as) :
     Prod.Lex (fun a₁ a₂ => a₁ < a₂) (fun a₁ a₂ => a₁ < a₂)
     (lengthRemaining (PartialListLike.tail as), lengthCurrent (PartialListLike.tail as))
     (lengthRemaining as, lengthCurrent as) := by
@@ -307,6 +316,121 @@ theorem decreasing_length_current_remaining {as : Bound α α' β β'}
     apply length_zero_iff_isNil.not.mpr
     simp_all only [PartialListLike.isNil, not_false_eq_true]
 
+theorem mem_iff_tail_or_head {as : Bound α α' β β'} {a : α} :
+    a ∈ as ↔ a ∈ PartialListLike.tail as ∨
+    ∃ not_nil, a = PartialListLike.head as not_nil := by
+  constructor
+  · simp only [Membership.mem]
+    intro h
+    induction h
+    case inl mem_current =>
+      rw [as.instCurrent.toProductiveListLike.mem_iff_tail_or_head] at mem_current
+      induction mem_current with
+      | inl tail =>
+        apply Or.inl
+        apply Or.inl
+        have not_nil := as.instCurrent.toProductiveListLike.not_nil_of_mem tail
+        induction as.tail_property with
+        | current _ prop =>
+          have := prop.g_current (fun _ inst as => inst.instMembership.mem a as)
+          simp_all only [not_false_eq_true, eq_iff_iff, iff_true]
+        | remaining _ _ prop =>
+          contradiction
+        | nil _ _ prop =>
+          contradiction
+      | inr head =>
+        apply Or.inr
+        replace ⟨not_nil, head⟩ := head
+        use not_nil
+        simp_all only [PartialListLike.head]
+    case inr mem_remaining =>
+      induction as.tail_property with
+      | current _ prop =>
+        apply Or.inl
+        apply Or.inr
+        simp_all only [prop.inst, prop.f, prop.inst', prop.remaining]
+      | remaining _ _ prop =>
+        have ⟨a', a_in_a', a'_in_remaining⟩ := mem_remaining
+        rw [as.inst'.toProductiveListLike.mem_iff_tail_or_head] at a'_in_remaining
+        induction a'_in_remaining with
+        | inl a'_in_tail =>
+          apply Or.inl
+          apply Or.inr
+          use a'
+          simp_all only [prop.inst, prop.f, prop.inst', prop.remaining, and_self]
+        | inr a'_in_head =>
+          apply Or.inl
+          apply Or.inl
+          rw [prop.g_current (fun _ inst as => inst.instMembership.mem a as)]
+          simp_all only [not_false_eq_true, exists_true_left]
+          subst a'_in_head
+          exact a_in_a'
+      | nil _ _ _ =>
+        have ⟨a', _, a'_in_remaining⟩ := mem_remaining
+        have := as.inst'.toProductiveListLike.not_nil_of_mem a'_in_remaining
+        contradiction
+  · intro h
+    induction h with
+    | inl mem_tail =>
+      simp only [Membership.mem] at mem_tail ⊢
+      induction mem_tail with
+      | inl mem_current =>
+        induction as.tail_property with
+        | current _ prop =>
+          apply Or.inl
+          apply as.instCurrent.toProductiveListLike.mem_of_mem_tail
+          have := prop.g_current (fun _ inst as => inst.instMembership.mem a as)
+          simp_all only [eq_iff_iff, iff_true]
+        | remaining _ not_nil prop =>
+          apply Or.inr
+          have := prop.g_current (fun _ inst as => inst.instMembership.mem a as)
+          use as.inst'.head as.remaining not_nil
+          simp_all only [eq_iff_iff, iff_true, true_and]
+          apply as.inst'.head_mem
+        | nil _ _ prop =>
+          have := prop.g_current (fun _ inst as => inst.instMembership.mem a as)
+          simp only [this] at mem_current
+          have := as.instCurrent.not_nil_of_mem mem_current
+          contradiction
+      | inr mem_remaining =>
+        apply Or.inr
+        have ⟨a', a_in_a', a'_in_remaining⟩ := mem_remaining
+        use a'
+        have prop := as.tail_property
+        simp_all [prop.f, prop.inst, prop.inst']
+        induction prop with
+        | current _ prop =>
+          simp_all only [prop.remaining]
+        | remaining _ _ prop =>
+          simp_all only [prop.remaining, as.inst'.toProductiveListLike.mem_of_mem_tail]
+        | nil _ _ prop =>
+          simp_all only [prop.remaining]
+    | inr eq_head =>
+      replace ⟨not_nil, eq_head⟩ := eq_head
+      simp only [PartialListLike.head] at eq_head
+      simp only [Membership.mem]
+      apply Or.inl
+      apply as.instCurrent.toProductiveListLike.mem_iff_tail_or_head a as.current
+        |>.mpr
+      apply Or.inr
+      use not_nil
+
+theorem not_nil_of_mem {as : Bound α α' β β'} {a : α} :
+    a ∈ as → ¬ PartialListLike.isNil as := by
+  simp only [Membership.mem]
+  intro h
+  induction h with
+  | inl mem_current =>
+    intro nil
+    have := as.instCurrent.not_nil_of_mem mem_current
+    contradiction
+  | inr mem_remaining =>
+    replace ⟨a', _, a'_in_remaining⟩ := mem_remaining
+    intro nil
+    have not_nil := as.inst'.toProductiveListLike.not_nil_of_mem a'_in_remaining
+    have := as.isNil_remaining_of_current |> not_imp_not.mpr <| not_nil
+    contradiction
+
 noncomputable def length (as : Bound α α' β β') :
     Subtype fun n : Nat => PartialListLike.isNil (PartialListLike.tail^[n] as) :=
   let rec go n current (h : current = PartialListLike.tail^[n] as) :=
@@ -324,24 +448,6 @@ noncomputable def length (as : Bound α α' β β') :
   go 0 as <| by
     simp only [Function.iterate_zero, id_eq]
 
--- noncomputable def find (as : Bound α α' β β') :
---     Subtype fun n : Nat => PartialListLike.isNil (PartialListLike.tail^[n] as) :=
---   let rec go n current (h : current = PartialListLike.tail^[n] as) :=
---     if nil : PartialListLike.isNil current then
---       Subtype.mk n <| by
---         simp_all only
---     else
---       go n.succ (PartialListLike.tail current) <| by
---         simp_all only [h, Function.iterate_succ', Function.comp_apply, not_false_eq_true]
---   termination_by (current.lengthRemaining, current.lengthCurrent)
---   decreasing_by
---     simp_wf
---     simp_all only [not_false_eq_true, decreasing_length_current_remaining]
-
---   go 0 as <| by
---     simp only [Function.iterate_zero, id_eq]
-
-
 instance instListLike : ListLike α (Bound α α' β β') where
   toPartialListLike := instPartialListLike
   terminal_isNil as is_nil := by
@@ -351,15 +457,17 @@ instance instListLike : ListLike α (Bound α α' β β') where
       simp_all only [PartialListLike.isNil, forall_true_left]
     case nil _ _ prop =>
       simp_all only [PartialListLike.isNil, ProductiveListLike.isNil_tail, prop.isNil_current]
-  consistent_mem a as := by
-    constructor
-    · simp only [PartialListLike.Mem, Membership.mem]
-      intro ⟨n, not_nil, h⟩
-
-      sorry
-    ·
-      sorry
   finite as := by
     let n := as.length
     use n.val
     exact n.property
+  consistent_mem := by
+    apply PartialListLike.consistent_mem'
+    · intro a as
+      apply mem_iff_tail_or_head
+    · intro a as
+      apply not_nil_of_mem
+    · intro as
+      let n := as.length
+      use n.val
+      exact n.property

@@ -92,3 +92,57 @@ instance setoid (α : Type u) : ClassSetoid (ProductiveListLike α) where
   iseqv := by
     apply Equivalence.comap
     exact  Setoid.iseqv
+
+theorem mem_iff_tail_or_head {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    (a : α) (as : β) :
+    inst.instMembership.mem a as ↔ inst.instMembership.mem a (inst.tail as) ∨
+    ∃ not_nil, a = inst.head as not_nil := by
+  simp only [← inst.consistent_mem]
+  simp only [PartialListLike.Mem]
+  constructor
+  · intro ⟨n, not_nil, h⟩
+    by_cases n_zero : n = 0
+    · apply Or.inr
+      subst n_zero
+      use not_nil
+      simp_all only [Function.iterate_zero, id_eq]
+    · apply Or.inl
+      have ⟨m, m_def⟩ := Nat.exists_eq_succ_of_ne_zero n_zero
+      subst m_def
+      use m
+      simp_all only [Nat.succ_ne_zero, not_false_eq_true, ← Function.iterate_succ_apply,
+        exists_prop, and_true]
+  · intro h
+    induction h with
+    | inl h =>
+      replace ⟨n, not_nil, h⟩ := h
+      use n.succ
+      simp_all only [Function.iterate_succ, Function.comp_apply, not_false_eq_true, exists_const]
+    | inr h =>
+      replace ⟨not_nil, h⟩ := h
+      use 0
+      simp_all only [Function.iterate_zero, id_eq, not_false_eq_true, exists_const]
+
+theorem not_nil_of_mem {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    {as : β} {a : α} :
+    inst.instMembership.mem a as → ¬ PartialListLike.isNil as := by
+  simp only [← inst.consistent_mem, PartialListLike.Mem]
+  intro ⟨n, not_nil, _⟩
+  apply iterate_terminal_isNil as n |> not_imp_not.mpr
+  exact not_nil
+
+theorem mem_of_mem_tail {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    {as : β} {a : α} :
+    inst.instMembership.mem a (inst.tail as) → inst.instMembership.mem a as := by
+  simp only [← inst.consistent_mem, PartialListLike.Mem]
+  intro ⟨n, not_nil, h⟩
+  use n.succ
+  use not_nil
+  simp_all only [Function.iterate_succ, Function.comp_apply]
+
+theorem head_mem {α : Type u} {β : Type v} [inst : ProductiveListLike α β]
+    {as : β} {not_nil}:
+    inst.instMembership.mem (inst.head as not_nil) as := by
+  simp only [← inst.consistent_mem, PartialListLike.Mem]
+  use 0
+  simp_all only [Function.iterate_zero, id_eq, not_false_eq_true, exists_const]

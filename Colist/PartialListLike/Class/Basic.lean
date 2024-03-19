@@ -136,3 +136,49 @@ instance setoid (α : Type u) : ClassSetoid (PartialListLike α) where
       simp only [equiv] at h₁₂ h₂₃
       apply equivExt.instSetoid.iseqv.trans (y := ⟨x₂.imp, x₂.inst, (x₂.inst.tail)^[n] x₂.value⟩)
       all_goals simp_all only [Setoid.r]
+
+theorem consistent_mem' {α : Type u} {β : Type v} [inst : PartialListLike α β]
+    (head_tail : (a : α) → (as : β) →
+      (inst.instMembership.mem a as ↔ inst.instMembership.mem a (inst.tail as) ∨
+      ∃ not_nil, a = inst.head as not_nil))
+    (mem_nil : (a : α) → (as : β) → inst.instMembership.mem a as → ¬ inst.isNil as)
+    (finite : (as : β) → inst.isFinite as) :
+    (a : α) → (as : β) → (inst.Mem a as ↔ inst.instMembership.mem a as) := by
+  intro a as
+  constructor
+  · intro ⟨n, not_nil, a_eq⟩
+    clear finite
+    clear mem_nil
+    induction n generalizing as with
+    | zero =>
+      rw [head_tail a as]
+      apply Or.inr
+      use not_nil
+      simp_all only [Function.iterate_zero, id_eq, exists_prop, and_true]
+    | succ n ih =>
+      apply head_tail a as |>.mpr
+      apply Or.inl
+      apply ih (inst.tail as) not_nil
+      rw [a_eq]
+      simp only [Function.iterate_succ, Function.comp_apply]
+  · replace ⟨n, finite⟩ := finite as
+    induction n generalizing as with
+    | zero =>
+      intro mem
+      replace := mem_nil a as mem
+      simp only [Nat.zero_eq, Function.iterate_zero, id_eq] at finite
+      contradiction
+    | succ n ih =>
+      intro mem
+      replace ih := ih (inst.tail as) finite
+      induction head_tail a as |>.mp mem with
+      | inl mem =>
+        have ⟨n, not_nil, a_eq⟩ := ih mem
+        use n.succ
+        use not_nil
+        exact a_eq
+      | inr head_eq =>
+        replace ⟨not_nil, head_eq⟩ := head_eq
+        use 0
+        use not_nil
+        exact head_eq
